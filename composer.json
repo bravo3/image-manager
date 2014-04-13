@@ -1,0 +1,39 @@
+{
+    "name": "bravo3/image-manager",
+    "type": "library",
+    "description": "A PHP 5.4 library to control dynamic image assets in a cloud environment",
+    "keywords": ["image", "aws", "google cloud", "azure"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Jordon Scott",
+            "email": "jordon@novatek.com.au"
+        }
+    ],
+    "autoload": {
+        "psr-0": {
+            "": ["src/", "tests/"]
+        }
+    },
+    "require": {
+        "php": ">=5.4.0",
+        "psr/log": "~1.0",
+        "bravo3/cache": "~0.1",
+        "eloquent/enumeration": "~5.1",
+        "intervention/image": "~1.6.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": ">=4.0.0",
+        "bravo3/cloud-controller": "~0.0.1@beta"
+    },
+    "minimum-stability": "beta",
+    "scripts": {
+        "post-install-cmd": [
+        ],
+        "post-update-cmd": [
+        ]
+    },
+    "config": {
+        "bin-dir": "bin"
+    }
+}
