@@ -10,6 +10,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 {
     protected static $tmp_dir;
     protected static $allow_delete = false;
+    const TEST_KEY = 'image.png';
 
 
     /**
@@ -18,7 +19,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      */
     public function testLocalImages($fn)
     {
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
 
         // We'll do a few memory tests here, doesn't prove a lot, but consumption should go up and down..
         gc_collect_cycles();
@@ -49,7 +50,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     public function testBadImage()
     {
         $fn = __DIR__.'/../Resources/not_an_image.png';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $im->load($fn);
     }
 
@@ -60,7 +61,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     public function testMissingImage()
     {
         $fn = __DIR__.'/../Resources/does_not_exist.png';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $im->load($fn);
     }
 
@@ -70,10 +71,42 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     public function testInvalidImage()
     {
         $fn = __DIR__.'/../Resources/actually_a_png.jpg';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $image = $im->load($fn);
         $this->assertTrue($image instanceof Image);
         $im->save($image, self::$tmp_dir.'local/actually_a_png.png');
+    }
+
+    /**
+     * TODO: add a dataProvider for a real cache and an absent cache
+     *
+     * @medium
+     */
+    public function testRemote()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $image_a = $im->load($fn, self::TEST_KEY);
+        $this->assertTrue($image_a->isHydrated());
+        $this->assertFalse($image_a->isPersistent());
+
+        $this->assertFalse($im->exists($image_a));
+        $im->push($image_a);
+        $this->assertTrue($im->exists($image_a));
+        $this->assertTrue($image_a->isPersistent());
+
+        $image_b = new Image(self::TEST_KEY);
+        $this->assertFalse($image_b->isHydrated());
+        $this->assertFalse($image_b->isPersistent());
+
+        $im->pull($image_b);
+        $this->assertTrue($image_b->isHydrated());
+        $this->assertTrue($image_b->isPersistent());
+        $im->save($image_b, self::$tmp_dir.'local/pushed_and_pulled.png');
+
+        $im->deleteRemote($image_b);
+        $this->assertFalse($im->exists($image_a));
     }
 
 
@@ -90,21 +123,6 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
             [$base.'image.png'],
             [$base.'transparent.png'],
             [$base.'animated.gif'],
-        ];
-    }
-
-    /**
-     * Get a list of bad images
-     *
-     * @return array
-     */
-    public function badImageProvider()
-    {
-        $base = __DIR__.'/../Resources/';
-        return [
-            [$base.'not_an_image.png'],
-            [$base.'does_not_exist.png'],
-            [$base.'actually_a_png.jpg'],
         ];
     }
 
@@ -131,7 +149,9 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         }
 
         self::$tmp_dir = $sys_temp.rand(10000, 99999).DIRECTORY_SEPARATOR;
+
         mkdir(self::$tmp_dir.'local', 0777, true);
+        mkdir(self::$tmp_dir.'remote', 0777, true);
     }
 
     public static function tearDownAfterClass()

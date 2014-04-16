@@ -20,6 +20,8 @@ use Intervention\Image\Image as InterventionImage;
  */
 class ImageManager
 {
+    const ERR_NO_KEY       = "Image does not have a key";
+    const ERR_NOT_HYDRATED = "Image is not hydrated";
 
     /**
      * A filesystem to store all images on
@@ -53,10 +55,23 @@ class ImageManager
      * If it is not hydrated this function will throw an exception
      *
      * @param Image $image
+     * @return $this
+     * @throws ImageManagerException
      */
     public function push(Image $image)
     {
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException(self::ERR_NOT_HYDRATED);
+        }
 
+        if (!$image->getKey()) {
+            throw new ImageManagerException(self::ERR_NO_KEY);
+        }
+
+        $this->filesystem->write($image->getKey(), $image->getContent());
+        $image->__friendSet('persistent', true);
+
+        return $this;
     }
 
     /**
@@ -67,12 +82,24 @@ class ImageManager
      * returns false.
      *
      * @param Image $image
-     * @return Image
+     * @return $this
+     * @throws ImageManagerException
      */
     public function pull(Image $image)
     {
+        if (!$image->getKey()) {
+            throw new ImageManagerException(self::ERR_NO_KEY);
+        }
 
-        return $image;
+        $data = $this->filesystem->read($image->getKey());
+
+        if (!$data) {
+            throw new BadImageException("Bad image data from remote");
+        }
+
+        $image->setImage(new InterventionImage($data), true);
+
+        return $this;
     }
 
     /**
@@ -81,22 +108,27 @@ class ImageManager
      * TODO: delete variations as well
      *
      * @param Image $image
+     * @return $this
      */
     public function delete(Image $image)
     {
         $this->deleteLocal($image);
         $this->deleteRemote($image);
         $image->flush();
+
+        return $this;
     }
 
     public function deleteRemote(Image $image)
     {
 
+        return $this;
     }
 
     public function deleteLocal(Image $image)
     {
 
+        return $this;
     }
 
     /**
@@ -105,15 +137,18 @@ class ImageManager
      * @param Image  $image
      * @param string $filename
      * @param int    $quality
+     * @return $this
      * @throws ImageManagerException
      */
     public function save(Image $image, $filename, $quality = 90)
     {
         if (!$image->isHydrated()) {
-            throw new ImageManagerException("Image is not hydrated");
+            throw new ImageManagerException(self::ERR_NOT_HYDRATED);
         }
 
         $image->getImage()->save($filename, $quality);
+
+        return $this;
     }
 
     /**
