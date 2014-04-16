@@ -3,7 +3,10 @@ namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Exceptions\ImageManagerException;
+use Bravo3\ImageManager\Exceptions\IoException;
 use Gaufrette\Filesystem;
+use Intervention\Image\Image as InterventionImage;
 
 /**
  * An image manager for cloud computing
@@ -18,14 +21,11 @@ class ImageManager
 {
 
     /**
-     * A storage pool for binary data
-     *
-     * This pool may have a slow response time and should return the entire object. Recommended pools are connectors
-     * to storage facilities like Amazon S3 or filesystem drivers.
+     * A filesystem to store all images on
      *
      * @var Filesystem
      */
-    protected $image_pool;
+    protected $filesystem;
 
     /**
      * A high-speed caching pool to store meta-data on stored objects
@@ -39,9 +39,9 @@ class ImageManager
     protected $cache_pool;
 
 
-    function __construct(Filesystem $image_pool, PoolInterface $cache_pool = null)
+    function __construct(Filesystem $filesystem, PoolInterface $cache_pool = null)
     {
-        $this->image_pool = $image_pool;
+        $this->filesystem = $filesystem;
         $this->cache_pool = $cache_pool;
     }
 
@@ -103,10 +103,16 @@ class ImageManager
      *
      * @param Image  $image
      * @param string $filename
+     * @param int    $quality
+     * @throws ImageManagerException
      */
-    public function save(Image $image, $filename)
+    public function save(Image $image, $filename, $quality = 90)
     {
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException("Image is not hydrated");
+        }
 
+        $image->getImage()->save($filename, $quality);
     }
 
     /**
@@ -118,7 +124,14 @@ class ImageManager
      */
     public function load($filename, $key = null)
     {
+        if (!is_readable($filename)) {
+            throw new IoException("File not readable: ".$filename);
+        }
 
+        $image = new Image($key);
+        $image->setImage(InterventionImage::make($filename));
+
+        return $image;
     }
 
     /**
@@ -132,7 +145,13 @@ class ImageManager
      */
     public function exists(Image $image)
     {
+        $key = $image->getKey();
 
+        if (!$key) {
+            return false;
+        }
+
+        return $this->filesystem->has($key);
     }
 
 

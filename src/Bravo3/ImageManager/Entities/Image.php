@@ -14,7 +14,7 @@ class Image
     /**
      * @var InterventionImage
      */
-    protected $image;
+    protected $image = null;
 
     /**
      * @var boolean
@@ -22,7 +22,7 @@ class Image
     protected $persistent = false;
 
 
-    protected function __construct($key)
+    function __construct($key = null)
     {
         $this->key = $key;
     }
@@ -31,20 +31,27 @@ class Image
     /**
      * Flush image data from memory
      */
-    public function flush()
+    public function flush($collect_garbage = true)
     {
         $this->image = null;
+
+        if ($collect_garbage) {
+            gc_collect_cycles();
+        }
     }
 
     /**
      * Set the underlying image data
      *
      * @param InterventionImage $image
+     * @param bool              $persistent True if the source is the remote
      * @return $this
      */
-    public function setImage($image)
+    public function setImage($image, $persistent = false)
     {
-        $this->image = $image;
+        $this->image      = $image;
+        $this->persistent = $persistent;
+
         return $this;
     }
 
@@ -112,5 +119,14 @@ class Image
         return $this->persistent;
     }
 
+    /**
+     * Check if the image data has been loaded
+     *
+     * @return bool
+     */
+    public function isHydrated()
+    {
+        return $this->image !== null;
+    }
 
 }
