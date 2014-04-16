@@ -3,6 +3,7 @@ namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
 use Gaufrette\Filesystem;
@@ -129,7 +130,12 @@ class ImageManager
         }
 
         $image = new Image($key);
-        $image->setImage(InterventionImage::make($filename));
+
+        try {
+            $image->setImage(InterventionImage::make($filename));
+        } catch (\Intervention\Image\Exception\InvalidImageTypeException $e) {
+            throw new BadImageException("Invalid or corrupted image: ".$filename, 0, $e);
+        }
 
         return $image;
     }

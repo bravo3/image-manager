@@ -43,6 +43,41 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
 
     /**
+     * @small
+     * @expectedException \Bravo3\ImageManager\Exceptions\BadImageException
+     */
+    public function testBadImage()
+    {
+        $fn = __DIR__.'/../Resources/not_an_image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im->load($fn);
+    }
+
+    /**
+     * @small
+     * @expectedException \Bravo3\ImageManager\Exceptions\IoException
+     */
+    public function testMissingImage()
+    {
+        $fn = __DIR__.'/../Resources/does_not_exist.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $im->load($fn);
+    }
+
+    /**
+     * @small
+     */
+    public function testInvalidImage()
+    {
+        $fn = __DIR__.'/../Resources/actually_a_png.jpg';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir)));
+        $image = $im->load($fn);
+        $this->assertTrue($image instanceof Image);
+        $im->save($image, self::$tmp_dir.'local/actually_a_png.png');
+    }
+
+
+    /**
      * Get a list of images
      *
      * @return array
@@ -55,6 +90,21 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
             [$base.'image.png'],
             [$base.'transparent.png'],
             [$base.'animated.gif'],
+        ];
+    }
+
+    /**
+     * Get a list of bad images
+     *
+     * @return array
+     */
+    public function badImageProvider()
+    {
+        $base = __DIR__.'/../Resources/';
+        return [
+            [$base.'not_an_image.png'],
+            [$base.'does_not_exist.png'],
+            [$base.'actually_a_png.jpg'],
         ];
     }
 
@@ -104,5 +154,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         }
         rmdir($dir);
     }
+
+
 }
  
