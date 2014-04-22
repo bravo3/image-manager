@@ -1,18 +1,35 @@
 Image Manager
 =============
 
-A PHP 5.4 image variation manager intended for cloud storage use.
+A PHP 5.4 image manager intended for cloud use. This image manager is designed to be low-level and work with 'keys' -
+not directly attach to an entity.
 
-This library should:
+Features
+--------
 
-* Allow you to store and retrieve images from any driver you
-* Seamlessly integration with major cloud providers via Bravo3/Cloud-Controller
-* Use the PSR caching draft as a persistent object storage interface (to be considered)
+* Easily push and pull images to any remote filesystem (eg Amazon S3)
+* Request an image with specific dimensions - allow the manager to transparently create & store this variation
+* Request that an image dimension exists (will be created if it doesn't), allowing for the storage device to be used as a CDN end-point
+* Use a caching service (PSR-6 compliant) to maintain a knowledge base of image dimensions available to improve performance
+* Load & save images from memory or a file
+* Convert image format & quality with ease
 
-You should be able to:
+Future Considerations
+---------------------
 
-* Resample any image on the fly, or ahead of your request
-* Manipulate your source image with a variety of operations
-* Use your cloud storage as a CDN instead of returning variations
-* Return your image variation directly, as a pipe to the client
+* Allow for image manipulations (eg add text, rotate, etc)
+
+Current State
+-------------
+
+### Working
+
+* Load and save from the local filesystem
+* Push and pull to a remote filesystem
+* Save in another format
+
+### Not Working
+
+* Image variations
+* Remote directory caching
 
