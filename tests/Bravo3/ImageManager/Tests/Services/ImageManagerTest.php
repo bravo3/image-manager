@@ -26,7 +26,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         gc_collect_cycles();
         $start_memory = memory_get_usage();
 
-        $image = $im->load($fn);
+        $image = $im->loadFromFile($fn);
         $this->assertTrue($image instanceof Image);
 
         $hydrated_memory = memory_get_usage();
@@ -52,7 +52,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     {
         $fn = __DIR__.'/../Resources/not_an_image.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
-        $img = $im->load($fn);
+        $img = $im->loadFromFile($fn);
         $im->save($img, self::$tmp_dir.'local/invalid.gif', 90);
     }
 
@@ -64,7 +64,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     {
         $fn = __DIR__.'/../Resources/does_not_exist.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
-        $im->load($fn);
+        $im->loadFromFile($fn);
     }
 
     /**
@@ -77,7 +77,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $fn = __DIR__.'/../Resources/image.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
 
-        $image_a = $im->load($fn, self::TEST_KEY);
+        $image_a = $im->loadFromFile($fn, self::TEST_KEY);
         $this->assertTrue($image_a->isHydrated());
         $this->assertFalse($image_a->isPersistent());
 
