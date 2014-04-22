@@ -3,6 +3,7 @@ namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
@@ -97,56 +98,45 @@ class ImageManager
             throw new BadImageException("Bad image data from remote");
         }
 
-        $image->setImage(new InterventionImage($data), true);
+        $image->load($data);
+        $image->__friendSet('persistent', true);
 
         return $this;
     }
 
     /**
-     * Delete all copies of the image and flush it from memory
-     *
-     * TODO: delete variations as well
+     * Delete an image from the remote
      *
      * @param Image $image
      * @return $this
      */
-    public function delete(Image $image)
+    public function remove(Image $image)
     {
-        $this->deleteLocal($image);
-        $this->deleteRemote($image);
-        $image->flush();
-
+        $this->filesystem->delete($image->getKey());
         return $this;
     }
 
-    public function deleteRemote(Image $image)
-    {
-
-        return $this;
-    }
-
-    public function deleteLocal(Image $image)
-    {
-
-        return $this;
-    }
 
     /**
      * Save the image to the local filesystem
      *
-     * @param Image  $image
-     * @param string $filename
-     * @param int    $quality
-     * @return $this
+     * If you specify either a quality or format, the image will be re-rendered. If you leave BOTH of these null,
+     * the raw data will be saved to the filesystem. If the image is a variation, the image will always be re-rendered.
+     *
+     * @param Image       $image
+     * @param string      $filename Path to save the image
+     * @param int         $quality  Defaults to 90 if re-rendering and left null
+     * @param ImageFormat $format   Will check the raw data if left null
      * @throws ImageManagerException
+     * @return $this
      */
-    public function save(Image $image, $filename, $quality = 90)
+    public function save(Image $image, $filename, $quality = null, ImageFormat $format = null)
     {
         if (!$image->isHydrated()) {
             throw new ImageManagerException(self::ERR_NOT_HYDRATED);
         }
 
-        $image->getImage()->save($filename, $quality);
+        file_put_contents($filename, $image->getContent($quality, $format));
 
         return $this;
     }
@@ -165,12 +155,7 @@ class ImageManager
         }
 
         $image = new Image($key);
-
-        try {
-            $image->setImage(InterventionImage::make($filename));
-        } catch (\Intervention\Image\Exception\InvalidImageTypeException $e) {
-            throw new BadImageException("Invalid or corrupted image: ".$filename, 0, $e);
-        }
+        $image->loadFromFile($filename);
 
         return $image;
     }
@@ -195,6 +180,32 @@ class ImageManager
         return $this->filesystem->has($key);
     }
 
+
+    /**
+     * Detect the image format from a filename
+     *
+     * @param $fn
+     * @return ImageFormat|null
+     */
+    public function formatFromFilename($fn)
+    {
+        $ext = pathinfo($fn, PATHINFO_EXTENSION);
+
+        switch (strtolower($ext)) {
+            default:
+                return null;
+
+            case 'gif':
+                return ImageFormat::GIF();
+
+            case 'png':
+                return ImageFormat::PNG();
+
+            case 'jpg':
+            case 'jpeg':
+                return ImageFormat::JPEG();
+        }
+    }
 
     /*
      * REQUIRE

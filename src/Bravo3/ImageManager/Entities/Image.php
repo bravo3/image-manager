@@ -2,7 +2,9 @@
 namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
+use Bravo3\ImageManager\Exceptions\IoException;
 use Intervention\Image\Image as InterventionImage;
 
 class Image
@@ -14,9 +16,14 @@ class Image
     protected $key;
 
     /**
-     * @var InterventionImage
+     * @var string
      */
-    protected $image = null;
+    protected $raw = null;
+
+    /**
+     * @var string
+     */
+    protected $raw_content_type = null;
 
     /**
      * @var boolean
@@ -35,7 +42,7 @@ class Image
      */
     public function flush($collect_garbage = true)
     {
-        $this->image = null;
+        $this->raw = null;
 
         if ($collect_garbage) {
             gc_collect_cycles();
@@ -43,54 +50,86 @@ class Image
     }
 
     /**
-     * Set the underlying image data
+     * Creates the Intervention Image object from the data data
      *
-     * @param InterventionImage $image
-     * @param bool              $persistent True if the source is the remote
-     * @return $this
+     * @throws ImageManagerException
      */
-    public function setImage($image, $persistent = false)
+    protected function createImageFromRawData()
     {
-        $this->image      = $image;
-        $this->persistent = $persistent;
+        if (!$this->raw) {
+            throw new ImageManagerException("Unable to create image without raw data");
+        }
 
-        return $this;
-    }
-
-    /**
-     * Get the underlying image data
-     *
-     * @return InterventionImage
-     */
-    public function getImage()
-    {
-        return $this->image;
+        return new InterventionImage($this->raw);
     }
 
     /**
      * Get the binary content of the image
      *
-     * @param int         $quality
-     * @param ImageFormat $format Null for auto-detect based on key, if no key exists an exception will be thrown
+     * This will be the original file data unless $quantity or $format are specified, in which the image will be
+     * re-rendered to meet the requirements. If this image is a variation, it will always be re-rendered.
+     *
+     * @param int         $quality Between 1-100, defaults to 90 if null is provided
+     * @param ImageFormat $format  Null to use the original format
      * @return string
      */
-    public function getContent($quality = 90, ImageFormat $format = null)
+    public function getContent($quality = null, ImageFormat $format = null)
     {
         if (!$this->isHydrated()) {
             return null;
         }
 
-        if (!$format) {
-            if (!$this->getKey()) {
-                throw new ImageManagerException("A key must exist when not specifying a format");
+        if ($quality !== null || $format !== null) {
+            $ext     = $format ? $format->key() : $this->getRawFormat();
+            $quality = $quality ? : 90;
+
+            if ($quality < 1) {
+                $quality = 1;
+            } elseif ($quality > 100) {
+                $quality = 100;
             }
 
-            $ext = pathinfo($this->getKey(), PATHINFO_EXTENSION);
+            if ($ext === null) {
+                throw new BadImageException("Unknown image format");
+            }
+
+            return $this->createImageFromRawData()->encode($ext, $quality);
         } else {
-            $ext = $format->key();
+            return $this->raw;
         }
 
-        return $this->image->encode($ext, $quality);
+    }
+
+    /**
+     * Check the data data for the image type
+     *
+     * If unknown or no data data is present, null will be returned
+     *
+     * @return ImageFormat|null
+     */
+    public function getRawFormat()
+    {
+        if (!$this->raw || strlen($this->raw) < 5) {
+            return null;
+        }
+
+        // JPEG: FF D8
+        if ($this->raw{0} == 0xff && $this->raw{1} == 0xd8) {
+            return ImageFormat::JPEG();
+        }
+
+        // PNG: 89 50 4E 47
+        if ($this->raw{0} == 0xff && substr($this->raw, 1, 3) == 'PNG') {
+            return ImageFormat::PNG();
+        }
+
+        // GIF87a: 47 49 46 38 37 61
+        // GIF89a: 47 49 46 38 39 61
+        if (substr($this->raw, 0, 6) == 'GIF87a' || substr($this->raw, 0, 6) == 'GIF89a') {
+            return ImageFormat::GIF();
+        }
+
+        return null;
     }
 
     /**
@@ -132,9 +171,41 @@ class Image
      */
     public function isHydrated()
     {
-        return $this->image !== null;
+        return $this->raw !== null;
     }
 
+
+    /**
+     * Set the data image binary data as per the file format
+     *
+     * @param string $data
+     * @return $this
+     */
+    public function load($data)
+    {
+        $this->raw        = $data;
+        $this->persistent = false;
+
+        return $this;
+    }
+
+    /**
+     * Set the data image binary data as per the file format
+     *
+     * @param string $fn
+     * @return $this
+     */
+    public function loadFromFile($fn)
+    {
+        if (!is_readable($fn)) {
+            throw new IoException("File not readable: ".$fn);
+        }
+
+        $this->raw        = file_get_contents($fn);
+        $this->persistent = false;
+
+        return $this;
+    }
 
     private $__friends = ['Bravo3\ImageManager\Services\ImageManager'];
 
@@ -156,5 +227,6 @@ class Image
             throw new \Exception("Property is private");
         }
     }
+
 
 }

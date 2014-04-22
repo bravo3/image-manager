@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Services\ImageManager;
 use Gaufrette\Adapter\Local as LocalAdapter;
 use Gaufrette\Filesystem;
@@ -32,9 +33,9 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertGreaterThanOrEqual($start_memory, $hydrated_memory, "Hydration increased memory consumption");
 
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.png');
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.jpg');
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.gif');
+        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.png', null, ImageFormat::PNG());
+        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.jpg', null, ImageFormat::JPEG());
+        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.gif', null, ImageFormat::GIF());
 
         gc_collect_cycles();
         $saved_memory = memory_get_usage();
@@ -51,7 +52,8 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     {
         $fn = __DIR__.'/../Resources/not_an_image.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
-        $im->load($fn);
+        $img = $im->load($fn);
+        $im->save($img, self::$tmp_dir.'local/invalid.gif', 90);
     }
 
     /**
@@ -63,18 +65,6 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $fn = __DIR__.'/../Resources/does_not_exist.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $im->load($fn);
-    }
-
-    /**
-     * @small
-     */
-    public function testInvalidImage()
-    {
-        $fn = __DIR__.'/../Resources/actually_a_png.jpg';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
-        $image = $im->load($fn);
-        $this->assertTrue($image instanceof Image);
-        $im->save($image, self::$tmp_dir.'local/actually_a_png.png');
     }
 
     /**
@@ -105,7 +95,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($image_b->isPersistent());
         $im->save($image_b, self::$tmp_dir.'local/pushed_and_pulled.png');
 
-        $im->deleteRemote($image_b);
+        $im->remove($image_b);
         $this->assertFalse($im->exists($image_a));
     }
 
