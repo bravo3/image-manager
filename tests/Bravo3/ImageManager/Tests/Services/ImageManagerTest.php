@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Services\ImageManager;
@@ -171,6 +172,166 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertTrue($var->isPersistent());
         $this->assertTrue($im->exists($var));
+    }
+
+    /**
+     * @medium
+     * @expectedException \Bravo3\ImageManager\Exceptions\ImageManagerException
+     */
+    public function testNotHydratedPush()
+    {
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $var = new Image(self::TEST_KEY);
+        $im->push($var);
+    }
+
+    /**
+     * @medium
+     * @expectedException \Bravo3\ImageManager\Exceptions\ImageManagerException
+     */
+    public function testNotHydratedSrc()
+    {
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $img = new Image(self::TEST_KEY);
+        $im->createVariation($img, ImageFormat::PNG());
+    }
+
+    /**
+     * @medium
+     */
+    public function testBounds()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->load(file_get_contents($fn), self::TEST_KEY);
+        $im->createVariation($source, ImageFormat::PNG(), -1);
+        $im->createVariation($source, ImageFormat::PNG(), 150);
+    }
+
+    /**
+     * @medium
+     * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     */
+    public function testNotFoundImage()
+    {
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $image = new Image('does-not-exist');
+        $im->pull($image);
+    }
+
+    /**
+     * @medium
+     * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     */
+    public function testNotFoundVariation()
+    {
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $image = new ImageVariation('does-not-exist', ImageFormat::PNG());
+        $im->pull($image);
+    }
+
+    /**
+     * @medium
+     */
+    public function testRemoteResample()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY_VAR);
+        $im->push($source);
+
+        $this->assertTrue($source->isHydrated());
+        $this->assertTrue($source->isPersistent());
+
+        $var_x = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(20));
+        $im->push($var_x);
+
+        $var_xy_stretch = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(200, null, false));
+        $im->push($var_xy_stretch);
+
+        $var_y = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(null, 200));
+        $im->push($var_y);
+
+        $var_xy = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200));
+        $im->push($var_xy);
+
+        $var_xy_scale = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, false));
+        $im->push($var_xy_scale);
+
+        $var_xy_stretch = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, false));
+        $im->push($var_xy_stretch);
+
+        $var_x_noup = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(1000, null, true, false));
+        $im->push($var_x_noup);
+
+        $var_x_up = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(1000));
+        $im->push($var_x_up);
+    }
+
+    /**
+     * @medium
+     */
+    public function testLocalResample()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY_VAR);
+        $resized = $im->createVariation($source, ImageFormat::JPEG(), 90, new ImageDimensions(100));
+
+        $this->assertTrue($resized->isHydrated());
+        $this->assertFalse($resized->isPersistent());
+
+        $im->save($resized, self::$tmp_dir.'local/resized.jpg');
+    }
+
+    /**
+     * @medium
+     * @expectedException \Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException
+     */
+    public function testOverwrite()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY);
+        $im->push($source);
+        $im->push($source, false);
+    }
+
+    /**
+     * @medium
+     */
+    public function testChangeKey()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY);
+        $im->push($source);
+
+        $this->assertTrue($source->isHydrated());
+        $this->assertTrue($source->isPersistent());
+
+        $source->setKey('change_key');
+
+        $this->assertTrue($source->isHydrated());
+        $this->assertFalse($source->isPersistent());
+
+        $im->push($source);
+        $this->assertTrue($source->isPersistent());
     }
 
     /**

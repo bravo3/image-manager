@@ -69,12 +69,12 @@ class Image
         }
 
         // JPEG: FF D8
-        if ($this->data{0} == 0xff && $this->data{1} == 0xd8) {
+        if (ord($this->data{0}) == 0xff && ord($this->data{1}) == 0xd8) {
             return ImageFormat::JPEG();
         }
 
         // PNG: 89 50 4E 47
-        if ($this->data{0} == 0xff && substr($this->data, 1, 3) == 'PNG') {
+        if ((ord($this->data{0}) == 0x89) && substr($this->data, 1, 3) == 'PNG') {
             return ImageFormat::PNG();
         }
 
@@ -96,6 +96,8 @@ class Image
     public function setKey($key)
     {
         $this->key = $key;
+        $this->persistent = false;
+
         return $this;
     }
 

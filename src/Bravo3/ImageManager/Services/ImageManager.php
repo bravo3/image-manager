@@ -7,9 +7,11 @@ use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
+use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
 use Bravo3\ImageManager\Exceptions\NotExistsException;
+use Gaufrette\Exception\FileAlreadyExists;
 use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
 use Intervention\Image\Image as InterventionImage;
@@ -62,7 +64,7 @@ class ImageManager
      * @return $this
      * @throws ImageManagerException
      */
-    public function push(Image $image)
+    public function push(Image $image, $overwrite = true)
     {
         if (!$image->isHydrated() && ($image instanceof ImageVariation)) {
             // A pull on a variation will check if the variation exists, if not create it
@@ -73,8 +75,12 @@ class ImageManager
             throw new ImageManagerException(self::ERR_NOT_HYDRATED);
         }
 
-        $this->filesystem->write($image->getKey(), $image->getData());
-        $image->__friendSet('persistent', true);
+        try {
+            $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
+            $image->__friendSet('persistent', true);
+        } catch (FileAlreadyExists $e) {
+            throw new ObjectAlreadyExistsException("Key '".$image->getKey()."' already exists on remote");
+        }
 
         return $this;
     }
@@ -125,7 +131,7 @@ class ImageManager
 
             } catch (FileNotFoundException $e) {
                 // Image not found
-                throw new NotExistsException("Parent image does not exist");
+                throw new NotExistsException("Image does not exist");
             }
 
         }
@@ -186,12 +192,8 @@ class ImageManager
         }
 
         // Image variation - re-render the image
-        $ext     = $variation->getFormat() ? $variation->getFormat() : $parent->getDataFormat();
+        $ext     = $variation->getFormat();
         $quality = $variation->getQuality() ? : 90;
-
-        if ($ext === null) {
-            throw new BadImageException("Unknown image format");
-        }
 
         if ($quality < 1) {
             $quality = 1;
@@ -205,7 +207,9 @@ class ImageManager
             throw new BadImageException("Bad image data", 0, $e);
         }
 
-        // TOOD: resample based on ImageDimensions
+        if ($dim = $variation->getDimensions()) {
+            $img->resize($dim->getWidth(), $dim->getHeight(), $dim->getMaintainRatio(), $dim->canUpscale());
+        }
 
         $variation->setData($img->encode($ext->key(), $quality));
 
@@ -261,7 +265,7 @@ class ImageManager
      * @param string $key
      * @return Image
      */
-    public function load($data, $key = null)
+    public function load($data, $key)
     {
         $image = new Image($key);
         $image->setData($data);
@@ -282,37 +286,7 @@ class ImageManager
     {
         $key = $image->getKey();
 
-        if (!$key) {
-            return false;
-        }
-
         return $this->filesystem->has($key);
-    }
-
-    /**
-     * Detect the image format from a filename
-     *
-     * @param $fn
-     * @return ImageFormat|null
-     */
-    public function formatFromFilename($fn)
-    {
-        $ext = pathinfo($fn, PATHINFO_EXTENSION);
-
-        switch (strtolower($ext)) {
-            default:
-                return null;
-
-            case 'gif':
-                return ImageFormat::GIF();
-
-            case 'png':
-                return ImageFormat::PNG();
-
-            case 'jpg':
-            case 'jpeg':
-                return ImageFormat::JPEG();
-        }
     }
 
     /*
