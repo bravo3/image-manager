@@ -166,7 +166,40 @@ class ImageDimensions
         return $this->y;
     }
 
+    /**
+     * Creates a signature containing the dimension specification
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        $out = '';
 
+        if ($this->min_x) {
+            $out .= ',lx'.$this->min_x;
+        }
+        if ($this->min_y) {
+            $out .= ',ly'.$this->min_y;
+        }
+        if ($this->max_x) {
+            $out .= ',hx'.$this->max_x;
+        }
+        if ($this->max_y) {
+            $out .= ',hy'.$this->max_y;
+        }
+        if ($this->x) {
+            $out .= ',x'.$this->max_x;
+        }
+        if ($this->y) {
+            $out .= ',y'.$this->max_y;
+        }
+
+        if (!$out) {
+            return '--';
+        }
+
+        return substr($out, 1);
+    }
 
 
 } 

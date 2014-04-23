@@ -34,8 +34,11 @@ class Image
      */
     protected $persistent = false;
 
-    function __construct($key = null)
+    function __construct($key)
     {
+        if (!$key) {
+            throw new ImageManagerException("Invalid key");
+        }
         $this->key = $key;
     }
 
@@ -123,7 +126,7 @@ class Image
      */
     public function isHydrated()
     {
-        return $this->data !== null;
+        return !empty($this->data) && !is_null($this->data);
     }
 
     /**

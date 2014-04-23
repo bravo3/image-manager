@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Services\ImageManager;
 use Gaufrette\Adapter\Local as LocalAdapter;
@@ -11,7 +12,8 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 {
     protected static $tmp_dir;
     protected static $allow_delete = false;
-    const TEST_KEY = 'image.png';
+    const TEST_KEY     = 'image';
+    const TEST_KEY_VAR = 'image_var';
 
 
     /**
@@ -33,9 +35,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         $this->assertGreaterThanOrEqual($start_memory, $hydrated_memory, "Hydration increased memory consumption");
 
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.png', null, ImageFormat::PNG());
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.jpg', null, ImageFormat::JPEG());
-        $im->save($image, self::$tmp_dir.'local/'.basename($fn).'.gif', null, ImageFormat::GIF());
+        $im->save($image, self::$tmp_dir.'local/'.basename($fn));
 
         gc_collect_cycles();
         $saved_memory = memory_get_usage();
@@ -50,10 +50,11 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      */
     public function testBadImage()
     {
-        $fn = __DIR__.'/../Resources/not_an_image.png';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $fn  = __DIR__.'/../Resources/not_an_image.png';
+        $im  = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $img = $im->loadFromFile($fn);
-        $im->save($img, self::$tmp_dir.'local/invalid.gif', 90);
+        $var = $im->createVariation($img, ImageFormat::JPEG(), 90);
+        $im->save($var, self::$tmp_dir.'local/invalid.jpg');
     }
 
     /**
@@ -99,6 +100,78 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($im->exists($image_a));
     }
 
+    /**
+     * @medium
+     */
+    public function testVariationLocalCreate()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY);
+
+        // Create and render the variation
+        $var = $im->createVariation($source, ImageFormat::JPEG(), 50);
+
+        $this->assertFalse($var->isPersistent());
+        $this->assertTrue($var->isHydrated());
+
+        // Test the local save
+        $im->save($var, self::$tmp_dir.'local/variation.jpg');
+        $this->assertFalse($var->isPersistent());
+
+        $im->push($var);
+        $this->assertTrue($var->isPersistent());
+
+        // Test the pull
+        $var_pull = new ImageVariation(self::TEST_KEY, ImageFormat::JPEG(), 50);
+        $this->assertFalse($var_pull->isPersistent());
+        $this->assertFalse($var_pull->isHydrated());
+
+        $im->pull($var_pull);
+        $this->assertTrue($var_pull->isPersistent());
+        $this->assertTrue($var_pull->isHydrated());
+        $im->save($var_pull, self::$tmp_dir.'local/variation_pulled.jpg');
+
+        // Test an auto-pull
+        $var_autopull = new ImageVariation(self::TEST_KEY, ImageFormat::JPEG(), 50);
+        $this->assertFalse($var_autopull->isPersistent());
+        $this->assertFalse($var_autopull->isHydrated());
+        $im->save($var_autopull, self::$tmp_dir.'local/variation_autopulled.jpg');
+
+        // Image data should be identical - no loss
+        $md5_a = md5_file(self::$tmp_dir.'local/variation.jpg');
+        $md5_b = md5_file(self::$tmp_dir.'local/variation_pulled.jpg');
+        $md5_c = md5_file(self::$tmp_dir.'local/variation_autopulled.jpg');
+        $this->assertEquals($md5_a, $md5_b);
+        $this->assertEquals($md5_a, $md5_c);
+    }
+
+    /**
+     * @medium
+     */
+    public function testVariationRemoteCreate()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY_VAR);
+        $im->push($source);
+
+        $var = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::GIF(), 50);
+        $im->pull($var);
+
+        $this->assertTrue($var->isHydrated());
+        $this->assertFalse($var->isPersistent());
+
+        $this->assertTrue($im->exists($source));
+        $this->assertFalse($im->exists($var));
+
+        $im->push($var);
+
+        $this->assertTrue($var->isPersistent());
+        $this->assertTrue($im->exists($var));
+    }
 
     /**
      * Get a list of images

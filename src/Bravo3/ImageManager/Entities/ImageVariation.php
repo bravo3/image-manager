@@ -7,23 +7,38 @@ use Bravo3\ImageManager\Traits\FriendTrait;
 class ImageVariation extends Image
 {
     use FriendTrait;
-    protected $__friends = ['Bravo3\ImageManager\Services\ImageManager'];
 
+    const DEFAULT_QUALITY = 90;
+    protected $__friends = ['Bravo3\ImageManager\Services\ImageManager'];
 
     /**
      * Create a new image variation
      *
      * @param Image           $image
+     * @param ImageFormat     $format
      * @param int             $quality
-     * @param null            $format
      * @param ImageDimensions $dimensions
      */
-    function __construct($key, $quality = 90, $format = null, ImageDimensions $dimensions = null)
-    {
+    function __construct(
+        $key,
+        ImageFormat $format,
+        $quality = self::DEFAULT_QUALITY,
+        ImageDimensions $dimensions = null
+    ) {
         parent::__construct($key);
         $this->dimensions = $dimensions;
         $this->format     = $format;
         $this->quality    = $quality;
+    }
+
+    public function getKey($parent = false)
+    {
+        if ($parent) {
+            return parent::getKey();
+        } else {
+            // TODO: add a configurable naming scheme here
+            return parent::getKey().'~'.$this;
+        }
     }
 
     /**
@@ -56,5 +71,17 @@ class ImageVariation extends Image
         return $this->quality;
     }
 
+    /**
+     * Creates a signature based on the variations applied
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        $out = 'q'.($this->getQuality() ? : self::DEFAULT_QUALITY).',d'.($this->getDimensions() ? : '--').
+               '.'.$this->getFormat()->value();
+
+        return $out;
+    }
 
 }
