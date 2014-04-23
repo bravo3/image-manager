@@ -3,10 +3,16 @@ namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageDimensions;
+use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
+use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
+use Bravo3\ImageManager\Exceptions\NotExistsException;
+use Gaufrette\Exception\FileAlreadyExists;
+use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
 use Intervention\Image\Image as InterventionImage;
 
@@ -21,7 +27,6 @@ use Intervention\Image\Image as InterventionImage;
  */
 class ImageManager
 {
-    const ERR_NO_KEY       = "Image does not have a key";
     const ERR_NOT_HYDRATED = "Image is not hydrated";
 
     /**
@@ -59,21 +64,27 @@ class ImageManager
      * @return $this
      * @throws ImageManagerException
      */
-    public function push(Image $image)
+    public function push(Image $image, $overwrite = true)
     {
+        if (!$image->isHydrated() && ($image instanceof ImageVariation)) {
+            // A pull on a variation will check if the variation exists, if not create it
+            $this->pull($image);
+        }
+
         if (!$image->isHydrated()) {
             throw new ImageManagerException(self::ERR_NOT_HYDRATED);
         }
 
-        if (!$image->getKey()) {
-            throw new ImageManagerException(self::ERR_NO_KEY);
+        try {
+            $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
+            $image->__friendSet('persistent', true);
+        } catch (FileAlreadyExists $e) {
+            throw new ObjectAlreadyExistsException("Key '".$image->getKey()."' already exists on remote");
         }
-
-        $this->filesystem->write($image->getKey(), $image->getContent());
-        $image->__friendSet('persistent', true);
 
         return $this;
     }
+
 
     /**
      * Get an image/variation from the remote
@@ -88,18 +99,42 @@ class ImageManager
      */
     public function pull(Image $image)
     {
-        if (!$image->getKey()) {
-            throw new ImageManagerException(self::ERR_NO_KEY);
+        if ($image instanceof ImageVariation) {
+            // Image is a variation - try the variation first, then try the source (parent) image
+            try {
+                // Get variation data
+                $image->setData($this->filesystem->read($image->getKey()));
+                $image->__friendSet('persistent', true);
+
+            } catch (FileNotFoundException $e) {
+                // Variation does not exist, get parent data
+                try {
+                    $data = $this->filesystem->read($image->getKey(true));
+
+                    // Resample
+                    $parent = new Image($image->getKey(true));
+                    $parent->setData($data);
+                    $this->hydrateVariation($parent, $image);
+                    $parent->flush();
+
+                } catch (FileNotFoundException $e) {
+                    // No image exists
+                    throw new NotExistsException("Parent image does not exist");
+                }
+            }
+        } else {
+            // Image is a source image
+            try {
+                // Get source data
+                $image->setData($this->filesystem->read($image->getKey()));
+                $image->__friendSet('persistent', true);
+
+            } catch (FileNotFoundException $e) {
+                // Image not found
+                throw new NotExistsException("Image does not exist");
+            }
+
         }
-
-        $data = $this->filesystem->read($image->getKey());
-
-        if (!$data) {
-            throw new BadImageException("Bad image data from remote");
-        }
-
-        $image->load($data);
-        $image->__friendSet('persistent', true);
 
         return $this;
     }
@@ -120,25 +155,84 @@ class ImageManager
     /**
      * Save the image to the local filesystem
      *
-     * If you specify either a quality or format, the image will be re-rendered. If you leave BOTH of these null,
-     * the raw data will be saved to the filesystem. If the image is a variation, the image will always be re-rendered.
+     * The extension of the filename is ignored, either the original format or the variation format will be used.
+     * If the image is not hydrated a pull will be attempted.
      *
-     * @param Image       $image
-     * @param string      $filename Path to save the image
-     * @param int         $quality  Defaults to 90 if re-rendering and left null
-     * @param ImageFormat $format   Will check the raw data if left null
-     * @throws ImageManagerException
+     * @param Image  $image
+     * @param string $filename Path to save the image
      * @return $this
      */
-    public function save(Image $image, $filename, $quality = null, ImageFormat $format = null)
+    public function save(Image $image, $filename)
     {
         if (!$image->isHydrated()) {
-            throw new ImageManagerException(self::ERR_NOT_HYDRATED);
+            // Auto-pull
+            $this->pull($image);
         }
 
-        file_put_contents($filename, $image->getContent($quality, $format));
+        file_put_contents($filename, $image->getData());
 
         return $this;
+    }
+
+    /**
+     * Hydrate and render an image variation with parent data
+     *
+     * You can use this to create a variation with a source image
+     *
+     * @param Image          $parent
+     * @param ImageVariation $variation
+     * @return ImageVariation
+     * @throws BadImageException
+     * @throws ImageManagerException
+     */
+    protected function hydrateVariation(Image $parent, ImageVariation &$variation)
+    {
+        if (!$parent->isHydrated()) {
+            throw new ImageManagerException('Parent: '.self::ERR_NOT_HYDRATED);
+        }
+
+        // Image variation - re-render the image
+        $ext     = $variation->getFormat();
+        $quality = $variation->getQuality() ? : 90;
+
+        if ($quality < 1) {
+            $quality = 1;
+        } elseif ($quality > 100) {
+            $quality = 100;
+        }
+
+        try {
+            $img = new InterventionImage($parent->getData());
+        } catch (\Intervention\Image\Exception\InvalidImageDataStringException $e) {
+            throw new BadImageException("Bad image data", 0, $e);
+        }
+
+        if ($dim = $variation->getDimensions()) {
+            $img->resize($dim->getWidth(), $dim->getHeight(), $dim->getMaintainRatio(), $dim->canUpscale());
+        }
+
+        $variation->setData($img->encode($ext->key(), $quality));
+
+        return $variation;
+    }
+
+    /**
+     * Create a new image variation from a local source image
+     *
+     * @param Image           $source
+     * @param ImageFormat     $format
+     * @param int             $quality
+     * @param ImageDimensions $dimensions
+     * @return ImageVariation
+     */
+    public function createVariation(
+        Image $source,
+        ImageFormat $format,
+        $quality = ImageVariation::DEFAULT_QUALITY,
+        ImageDimensions $dimensions = null
+    ) {
+        $var = new ImageVariation($source->getKey(), $format, $quality, $dimensions);
+        return $this->hydrateVariation($source, $var);
     }
 
     /**
@@ -148,14 +242,33 @@ class ImageManager
      * @param string $key
      * @return Image
      */
-    public function load($filename, $key = null)
+    public function loadFromFile($filename, $key = null)
     {
         if (!is_readable($filename)) {
             throw new IoException("File not readable: ".$filename);
         }
 
+        if (!$key) {
+            $key = basename($filename);
+        }
+
         $image = new Image($key);
-        $image->loadFromFile($filename);
+        $image->setData(file_get_contents($filename));
+
+        return $image;
+    }
+
+    /**
+     * Create a new image from memory and hydrate it
+     *
+     * @param string $filename
+     * @param string $key
+     * @return Image
+     */
+    public function load($data, $key)
+    {
+        $image = new Image($key);
+        $image->setData($data);
 
         return $image;
     }
@@ -173,38 +286,7 @@ class ImageManager
     {
         $key = $image->getKey();
 
-        if (!$key) {
-            return false;
-        }
-
         return $this->filesystem->has($key);
-    }
-
-
-    /**
-     * Detect the image format from a filename
-     *
-     * @param $fn
-     * @return ImageFormat|null
-     */
-    public function formatFromFilename($fn)
-    {
-        $ext = pathinfo($fn, PATHINFO_EXTENSION);
-
-        switch (strtolower($ext)) {
-            default:
-                return null;
-
-            case 'gif':
-                return ImageFormat::GIF();
-
-            case 'png':
-                return ImageFormat::PNG();
-
-            case 'jpg':
-            case 'jpeg':
-                return ImageFormat::JPEG();
-        }
     }
 
     /*

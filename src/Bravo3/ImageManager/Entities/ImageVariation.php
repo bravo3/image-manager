@@ -1,36 +1,87 @@
 <?php
 namespace Bravo3\ImageManager\Entities;
 
+use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Traits\FriendTrait;
+
 class ImageVariation extends Image
 {
+    use FriendTrait;
+
+    const DEFAULT_QUALITY = 90;
+    protected $__friends = ['Bravo3\ImageManager\Services\ImageManager'];
 
     /**
-     * @var Image
-     */
-    protected $parent;
-
-    /**
-     * Set Parent
+     * Create a new image variation
      *
-     * @param Image $parent
-     * @return $this
+     * @param Image           $image
+     * @param ImageFormat     $format
+     * @param int             $quality
+     * @param ImageDimensions $dimensions
      */
-    public function setParent($parent)
+    function __construct(
+        $key,
+        ImageFormat $format,
+        $quality = self::DEFAULT_QUALITY,
+        ImageDimensions $dimensions = null
+    ) {
+        parent::__construct($key);
+        $this->dimensions = $dimensions;
+        $this->format     = $format;
+        $this->quality    = $quality;
+    }
+
+    public function getKey($parent = false)
     {
-        $this->parent = $parent;
-        return $this;
+        if ($parent) {
+            return parent::getKey();
+        } else {
+            // TODO: add a configurable naming scheme here
+            return parent::getKey().'~'.$this;
+        }
     }
 
     /**
-     * Get Parent
+     * Get Dimensions
      *
-     * @return Image
+     * @return ImageDimensions
      */
-    public function getParent()
+    public function getDimensions()
     {
-        return $this->parent;
+        return $this->dimensions;
     }
 
+    /**
+     * Get Format
+     *
+     * @return ImageFormat
+     */
+    public function getFormat()
+    {
+        return $this->format;
+    }
 
+    /**
+     * Get Quality
+     *
+     * @return int
+     */
+    public function getQuality()
+    {
+        return $this->quality;
+    }
 
-} 
+    /**
+     * Creates a signature based on the variations applied
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        $out = 'q'.($this->getQuality() ? : self::DEFAULT_QUALITY).',d'.($this->getDimensions() ? : '--').
+               '.'.$this->getFormat()->value();
+
+        return $out;
+    }
+
+}
