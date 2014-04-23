@@ -27,9 +27,9 @@ Current State
 * Load and save from the local filesystem
 * Push and pull to a remote filesystem
 * Save in another format
+* Image variations
 
 ### Not Working
 
-* Image variations
 * Remote directory caching
 
