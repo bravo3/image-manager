@@ -24,8 +24,7 @@
         "knplabs/gaufrette": "~0.1.7"
     },
     "require-dev": {
-        "phpunit/phpunit": ">=4.0.0",
-        "bravo3/cloud-controller": "~0.0.1@beta"
+        "phpunit/phpunit": ">=4.0.0"
     },
     "minimum-stability": "beta",
     "scripts": {
