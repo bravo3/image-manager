@@ -1,6 +1,7 @@
 <?php
 namespace Bravo3\ImageManager\Tests\Services;
 
+use Bravo3\Cache\Ephemeral\EphemeralCachePool;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
@@ -70,14 +71,13 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * TODO: add a dataProvider for a real cache and an absent cache
-     *
      * @medium
+     * @dataProvider cacheProvider
      */
-    public function testRemote()
+    public function testRemote($cache)
     {
         $fn = __DIR__.'/../Resources/image.png';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), $cache);
 
         $image_a = $im->loadFromFile($fn, self::TEST_KEY);
         $this->assertTrue($image_a->isHydrated());
@@ -99,6 +99,19 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         $im->remove($image_b);
         $this->assertFalse($im->exists($image_a));
+    }
+
+    /**
+     * Data provider returning a real cache and a null cache
+     *
+     * @return array
+     */
+    public function cacheProvider()
+    {
+        return [
+          [null],
+          [new EphemeralCachePool()]
+        ];
     }
 
     /**
@@ -333,6 +346,8 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $im->push($source);
         $this->assertTrue($source->isPersistent());
     }
+
+    // --
 
     /**
      * Get a list of images

@@ -18,7 +18,7 @@
     "require": {
         "php": ">=5.4.0",
         "psr/log": "~1.0",
-        "bravo3/cache": "~0.1",
+        "bravo3/cache": "~0.1.1",
         "eloquent/enumeration": "~5.1",
         "intervention/image": "~1.6.2",
         "knplabs/gaufrette": "~0.1.7"
