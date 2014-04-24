@@ -224,11 +224,12 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
      */
-    public function testNotFoundImage()
+    public function testNotFoundImage($cache)
     {
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), $cache);
 
         $image = new Image('does-not-exist');
         $im->pull($image);
@@ -236,11 +237,12 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
      */
-    public function testNotFoundVariation()
+    public function testNotFoundVariation($cache)
     {
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), $cache);
 
         $image = new ImageVariation('does-not-exist', ImageFormat::PNG());
         $im->pull($image);
@@ -312,12 +314,13 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @medium
+     * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException
      */
-    public function testOverwrite()
+    public function testOverwrite($cache)
     {
         $fn = __DIR__.'/../Resources/image.png';
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), $cache);
 
         $source = $im->loadFromFile($fn, self::TEST_KEY);
         $im->push($source);
