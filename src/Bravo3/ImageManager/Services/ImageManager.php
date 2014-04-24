@@ -27,7 +27,10 @@ use Intervention\Image\Image as InterventionImage;
  */
 class ImageManager
 {
-    const ERR_NOT_HYDRATED = "Image is not hydrated";
+    const ERR_NOT_HYDRATED      = "Image is not hydrated";
+    const ERR_NOT_EXISTS        = "Image does not exist";
+    const ERR_PARENT_NOT_EXISTS = "Parent image does not exist";
+    const ERR_ALREADY_EXISTS    = "Object already exists on remote";
 
     /**
      * A filesystem to store all images on
@@ -75,11 +78,18 @@ class ImageManager
             throw new ImageManagerException(self::ERR_NOT_HYDRATED);
         }
 
+        if (!$overwrite && $this->tagExists($image->getKey()) === true) {
+            throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
+        }
+
         try {
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
+            $this->tag($image->getKey());
+
         } catch (FileAlreadyExists $e) {
-            throw new ObjectAlreadyExistsException("Key '".$image->getKey()."' already exists on remote");
+            $this->tag($image->getKey());
+            throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
         }
 
         return $this;
@@ -100,44 +110,122 @@ class ImageManager
     public function pull(Image $image)
     {
         if ($image instanceof ImageVariation) {
-            // Image is a variation - try the variation first, then try the source (parent) image
-            try {
-                // Get variation data
-                $image->setData($this->filesystem->read($image->getKey()));
-                $image->__friendSet('persistent', true);
-
-            } catch (FileNotFoundException $e) {
-                // Variation does not exist, get parent data
-                try {
-                    $data = $this->filesystem->read($image->getKey(true));
-
-                    // Resample
-                    $parent = new Image($image->getKey(true));
-                    $parent->setData($data);
-                    $this->hydrateVariation($parent, $image);
-                    $parent->flush();
-
-                } catch (FileNotFoundException $e) {
-                    // No image exists
-                    throw new NotExistsException("Parent image does not exist");
-                }
-            }
+            $this->pullVariation($image);
         } else {
-            // Image is a source image
-            try {
-                // Get source data
-                $image->setData($this->filesystem->read($image->getKey()));
-                $image->__friendSet('persistent', true);
-
-            } catch (FileNotFoundException $e) {
-                // Image not found
-                throw new NotExistsException("Image does not exist");
-            }
-
+            $this->pullSource($image);
         }
 
         return $this;
     }
+
+    /**
+     * Pull a source (or variation) image
+     *
+     * @param Image $image
+     * @throws NotExistsException
+     */
+    protected function pullSource(Image $image)
+    {
+        // Image is a source image
+        if ($this->tagExists($image->getKey()) === false) {
+            throw new NotExistsException(self::ERR_NOT_EXISTS);
+        }
+
+        try {
+            // Get source data
+            $image->setData($this->filesystem->read($image->getKey()));
+            $image->__friendSet('persistent', true);
+
+        } catch (FileNotFoundException $e) {
+            // Image not found
+            $this->untag($image->getKey());
+            throw new NotExistsException(self::ERR_NOT_EXISTS);
+        }
+    }
+
+    /**
+     * Pull a variation image, if the variation does not exist, try pulling the source and creating the variation
+     *
+     * @param ImageVariation $image
+     * @throws NotExistsException
+     */
+    protected function pullVariation(ImageVariation $image)
+    {
+        try {
+            // First, check if the variation exists on the remote
+            $this->pullSource($image);
+
+        } catch (NotExistsException $e) {
+            // Variation does not exist, try pulling the parent data and creating the variation
+            try {
+                if ($this->tagExists($image->getKey(true)) === false) {
+                    throw new NotExistsException(self::ERR_PARENT_NOT_EXISTS);
+                }
+
+                $data = $this->filesystem->read($image->getKey(true));
+
+                // Resample
+                $parent = new Image($image->getKey(true));
+                $parent->setData($data);
+                $this->hydrateVariation($parent, $image);
+                $parent->flush();
+
+            } catch (FileNotFoundException $e) {
+                // No image exists
+                throw new NotExistsException(self::ERR_PARENT_NOT_EXISTS);
+            }
+        }
+    }
+
+
+    /**
+     * Mark a file as existing on the remote
+     *
+     * @param string $key
+     */
+    protected function tag($key)
+    {
+        if (!$this->cache_pool) {
+            return;
+        }
+
+        $item = $this->cache_pool->getItem('remote.'.$key);
+        $item->set(1, null);
+    }
+
+    /**
+     * Mark a file as absent on the remote
+     *
+     * @param string $key
+     */
+    protected function untag($key)
+    {
+        if (!$this->cache_pool) {
+            return;
+        }
+
+        $item = $this->cache_pool->getItem('remote.'.$key);
+        $item->delete();
+    }
+
+    /**
+     * Check if a file exists on the remote
+     *
+     * Returns null if caching isn't available (and unsure), else a boolean value
+     *
+     * @param Image $image
+     * @return bool|null
+     */
+    protected function tagExists($key)
+    {
+        if (!$this->cache_pool) {
+            return null;
+        }
+
+        $item = $this->cache_pool->getItem('remote.'.$key);
+        return $item->exists();
+    }
+
 
     /**
      * Delete an image from the remote
@@ -148,6 +236,7 @@ class ImageManager
     public function remove(Image $image)
     {
         $this->filesystem->delete($image->getKey());
+        $this->untag($image->getKey());
         return $this;
     }
 
@@ -285,6 +374,11 @@ class ImageManager
     public function exists(Image $image)
     {
         $key = $image->getKey();
+
+        $tag_exists = $this->tagExists($key);
+        if ($tag_exists !== null) {
+            return $tag_exists;
+        }
 
         return $this->filesystem->has($key);
     }
