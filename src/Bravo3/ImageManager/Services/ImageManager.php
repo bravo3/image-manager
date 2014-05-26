@@ -294,6 +294,8 @@ class ImageManager
             $img = new InterventionImage($parent->getData());
         } catch (\Intervention\Image\Exception\InvalidImageDataStringException $e) {
             throw new BadImageException("Bad image data", 0, $e);
+        } catch (\Intervention\Image\Exception\ImageNotFoundException $e) {
+            throw new BadImageException("Not an image", 0, $e);
         }
 
         if ($dim = $variation->getDimensions()) {
@@ -382,25 +384,6 @@ class ImageManager
 
         return $this->filesystem->has($key);
     }
-
-    /*
-     * REQUIRE
-     * -------
-     *
-     * - A facility to save a new image (from memory)
-     * - A facility to delete an image, and all of it's variations
-     * - A facility to check if a variation exists [and create it]
-     * - A facility to manually create a variation
-     * - A facility to retrieve an image/variation (to memory)
-     * - A facility to retrieve a URL for an image/variation
-     *
-     * CONSIDER
-     * --------
-     *
-     * - How do we tackle URL resolution?
-     * - Forking Illuminate to provide stream support and manual format saving (instead of auto-detect format on extension)
-     *
-     */
 
 }
  
