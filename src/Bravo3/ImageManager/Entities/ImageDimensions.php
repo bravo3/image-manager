@@ -27,12 +27,18 @@ class ImageDimensions
      */
     protected $maintain_ratio;
 
-    function __construct($width = null, $height = null, $maintain_ratio = true, $upscale = true)
+    /**
+     * @var bool
+     */
+    protected $grab;
+
+    function __construct($width = null, $height = null, $maintain_ratio = true, $upscale = true, $grab = false)
     {
         $this->width          = $width;
         $this->height         = $height;
         $this->upscale        = $upscale;
         $this->maintain_ratio = $maintain_ratio;
+        $this->grab           = $grab;
     }
 
     /**
@@ -45,7 +51,8 @@ class ImageDimensions
         return 'x'.($this->getWidth() ? : '-').
                'y'.($this->getHeight() ? : '-').
                'u'.($this->canUpscale() ? '1' : '0').
-               'r'.($this->getMaintainRatio() ? '1' : '0');
+               'r'.($this->getMaintainRatio() ? '1' : '0').
+               'g'.($this->getGrab() ? 'g' : '0');
     }
 
     /**
@@ -88,5 +95,13 @@ class ImageDimensions
         return $this->maintain_ratio;
     }
 
-
+    /**
+     * Check if also crop as well as resize
+     *
+     * @return boolean
+     */
+    public function getGrab()
+    {
+        return $this->grab;
+    }
 }

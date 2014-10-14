@@ -299,7 +299,11 @@ class ImageManager
         }
 
         if ($dim = $variation->getDimensions()) {
-            $img->resize($dim->getWidth(), $dim->getHeight(), $dim->getMaintainRatio(), $dim->canUpscale());
+            if ($dim->getGrab()) {
+                $img->grab($dim->getWidth(), $dim->getHeight());
+            } else {
+                $img->resize($dim->getWidth(), $dim->getHeight(), $dim->getMaintainRatio(), $dim->canUpscale());
+            }
         }
 
         $variation->setData($img->encode($ext->key(), $quality));

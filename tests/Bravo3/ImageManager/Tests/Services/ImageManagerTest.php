@@ -293,6 +293,10 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $var_x_up = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
             new ImageDimensions(1000));
         $im->push($var_x_up);
+
+        $var_g = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, true, true, true));
+        $im->push($var_g);
     }
 
     /**
