@@ -2,11 +2,8 @@
 namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
-use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
-use Bravo3\ImageManager\Exceptions\IoException;
 use Bravo3\ImageManager\Traits\FriendTrait;
-use Intervention\Image\Image as InterventionImage;
 
 class Image
 {
@@ -34,7 +31,11 @@ class Image
      */
     protected $persistent = false;
 
-    function __construct($key)
+    /**
+     * @param string $key
+     * @throws ImageManagerException
+     */
+    public function __construct($key)
     {
         if (!$key) {
             throw new ImageManagerException("Invalid key");
@@ -42,9 +43,10 @@ class Image
         $this->key = $key;
     }
 
-
     /**
      * Flush image data from memory
+     *
+     * @param bool $collect_garbage
      */
     public function flush($collect_garbage = true)
     {
@@ -153,6 +155,4 @@ class Image
     {
         return $this->data;
     }
-
-
 }

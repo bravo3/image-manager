@@ -7,10 +7,10 @@ use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
-use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
 use Bravo3\ImageManager\Exceptions\NotExistsException;
+use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
 use Gaufrette\Exception\FileAlreadyExists;
 use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
@@ -50,13 +50,15 @@ class ImageManager
      */
     protected $cache_pool;
 
-
+    /**
+     * @param Filesystem    $filesystem
+     * @param PoolInterface $cache_pool
+     */
     function __construct(Filesystem $filesystem, PoolInterface $cache_pool = null)
     {
         $this->filesystem = $filesystem;
         $this->cache_pool = $cache_pool;
     }
-
 
     /**
      * Push a local image/variation to the remote
@@ -64,8 +66,11 @@ class ImageManager
      * If it is not hydrated this function will throw an exception
      *
      * @param Image $image
+     * @param bool  $overwrite
      * @return $this
      * @throws ImageManagerException
+     * @throws ObjectAlreadyExistsException
+     * @throws \Exception
      */
     public function push(Image $image, $overwrite = true)
     {
@@ -94,7 +99,6 @@ class ImageManager
 
         return $this;
     }
-
 
     /**
      * Get an image/variation from the remote
@@ -213,7 +217,7 @@ class ImageManager
      *
      * Returns null if caching isn't available (and unsure), else a boolean value
      *
-     * @param Image $image
+     * @param string $key
      * @return bool|null
      */
     protected function tagExists($key)
@@ -239,7 +243,6 @@ class ImageManager
         $this->untag($image->getKey());
         return $this;
     }
-
 
     /**
      * Save the image to the local filesystem
@@ -282,7 +285,7 @@ class ImageManager
 
         // Image variation - re-render the image
         $ext     = $variation->getFormat();
-        $quality = $variation->getQuality() ? : 90;
+        $quality = $variation->getQuality() ?: 90;
 
         if ($quality < 1) {
             $quality = 1;
@@ -356,7 +359,7 @@ class ImageManager
     /**
      * Create a new image from memory and hydrate it
      *
-     * @param string $filename
+     * @param string $data
      * @param string $key
      * @return Image
      */
@@ -390,4 +393,3 @@ class ImageManager
     }
 
 }
- 

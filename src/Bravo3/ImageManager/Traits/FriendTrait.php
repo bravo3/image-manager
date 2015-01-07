@@ -3,7 +3,6 @@ namespace Bravo3\ImageManager\Traits;
 
 trait FriendTrait
 {
-
     /**
      * Property setter for friend classes
      *
@@ -24,5 +23,4 @@ trait FriendTrait
             throw new \Exception("Property is private");
         }
     }
-
 }

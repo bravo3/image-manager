@@ -6,7 +6,6 @@ namespace Bravo3\ImageManager\Entities;
  */
 class ImageDimensions
 {
-
     /**
      * @var int
      */
@@ -32,7 +31,14 @@ class ImageDimensions
      */
     protected $grab;
 
-    function __construct($width = null, $height = null, $maintain_ratio = true, $upscale = true, $grab = false)
+    /**
+     * @param int  $width
+     * @param int  $height
+     * @param bool $maintain_ratio
+     * @param bool $upscale
+     * @param bool $grab
+     */
+    public function __construct($width = null, $height = null, $maintain_ratio = true, $upscale = true, $grab = false)
     {
         $this->width          = $width;
         $this->height         = $height;
@@ -48,8 +54,8 @@ class ImageDimensions
      */
     public function __toString()
     {
-        return 'x'.($this->getWidth() ? : '-').
-               'y'.($this->getHeight() ? : '-').
+        return 'x'.($this->getWidth() ?: '-').
+               'y'.($this->getHeight() ?: '-').
                'u'.($this->canUpscale() ? '1' : '0').
                'r'.($this->getMaintainRatio() ? '1' : '0').
                'g'.($this->getGrab() ? 'g' : '0');

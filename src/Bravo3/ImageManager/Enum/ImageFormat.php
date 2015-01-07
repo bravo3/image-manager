@@ -8,9 +8,9 @@ use Eloquent\Enumeration\AbstractEnumeration;
  * @method static ImageFormat JPEG()
  * @method static ImageFormat GIF()
  */
-class ImageFormat extends AbstractEnumeration
+final class ImageFormat extends AbstractEnumeration
 {
-    const PNG = 'png';
+    const PNG  = 'png';
     const JPEG = 'jpg';
-    const GIF = 'gif';
-} 
+    const GIF  = 'gif';
+}

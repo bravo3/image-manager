@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Traits\FriendTrait;
 
 class ImageVariation extends Image
@@ -14,10 +15,11 @@ class ImageVariation extends Image
     /**
      * Create a new image variation
      *
-     * @param Image           $image
+     * @param string          $key
      * @param ImageFormat     $format
      * @param int             $quality
      * @param ImageDimensions $dimensions
+     * @throws ImageManagerException
      */
     function __construct(
         $key,
@@ -31,6 +33,12 @@ class ImageVariation extends Image
         $this->quality    = $quality;
     }
 
+    /**
+     * Get variation or image key
+     *
+     * @param bool $parent
+     * @return string
+     */
     public function getKey($parent = false)
     {
         if ($parent) {
@@ -78,10 +86,9 @@ class ImageVariation extends Image
      */
     public function __toString()
     {
-        $out = 'q'.($this->getQuality() ? : self::DEFAULT_QUALITY).',d'.($this->getDimensions() ? : '--').
-               '.'.$this->getFormat()->value();
+        $out = 'q'.($this->getQuality() ?: self::DEFAULT_QUALITY).',d'.($this->getDimensions() ?: '--').
+               '.'.(string)$this->getFormat()->value();
 
         return $out;
     }
-
 }
