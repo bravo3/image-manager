@@ -2,6 +2,8 @@
 namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
+use Bravo3\ImageManager\Encoders\EncoderInterface;
+use Bravo3\ImageManager\Encoders\InterventionEncoder;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
@@ -9,12 +11,12 @@ use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
 use Bravo3\ImageManager\Exceptions\IoException;
+use Bravo3\ImageManager\Exceptions\NoSupportedEncoderException;
 use Bravo3\ImageManager\Exceptions\NotExistsException;
 use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
 use Gaufrette\Exception\FileAlreadyExists;
 use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
-use Intervention\Image\Image as InterventionImage;
 
 /**
  * An image manager for cloud computing
@@ -51,13 +53,28 @@ class ImageManager
     protected $cache_pool;
 
     /**
+     * @var EncoderInterface[]
+     */
+    protected $encoders;
+
+    /**
+     * Create a new image manager
+     *
+     * If you do not include any encoders, an InterventionEncoder will be automatically added.
+     *
      * @param Filesystem    $filesystem
      * @param PoolInterface $cache_pool
+     * @param array         $encoders
      */
-    function __construct(Filesystem $filesystem, PoolInterface $cache_pool = null)
+    public function __construct(Filesystem $filesystem, PoolInterface $cache_pool = null, array $encoders = [])
     {
         $this->filesystem = $filesystem;
         $this->cache_pool = $cache_pool;
+        $this->encoders   = $encoders;
+
+        if (!$this->encoders) {
+            $this->addEncoder(new InterventionEncoder());
+        }
     }
 
     /**
@@ -283,8 +300,6 @@ class ImageManager
             throw new ImageManagerException('Parent: '.self::ERR_NOT_HYDRATED);
         }
 
-        // Image variation - re-render the image
-        $ext     = $variation->getFormat();
         $quality = $variation->getQuality() ?: 90;
 
         if ($quality < 1) {
@@ -293,23 +308,23 @@ class ImageManager
             $quality = 100;
         }
 
-        try {
-            $img = new InterventionImage($parent->getData());
-        } catch (\Intervention\Image\Exception\InvalidImageDataStringException $e) {
-            throw new BadImageException("Bad image data", 0, $e);
-        } catch (\Intervention\Image\Exception\ImageNotFoundException $e) {
-            throw new BadImageException("Not an image", 0, $e);
-        }
+        $variation->setData(null);
+        $input = $parent->getData();
 
-        if ($dim = $variation->getDimensions()) {
-            if ($dim->getGrab()) {
-                $img->grab($dim->getWidth(), $dim->getHeight());
-            } else {
-                $img->resize($dim->getWidth(), $dim->getHeight(), $dim->getMaintainRatio(), $dim->canUpscale());
+        foreach ($this->encoders as $encoder) {
+            if ($encoder->supports($input)) {
+                $encoder->setData($input);
+                $variation->setData(
+                    $encoder->createVariation($variation->getFormat(), $quality, $variation->getDimensions())
+                );
+                $encoder->setData(null);
+                break;
             }
         }
 
-        $variation->setData($img->encode($ext->key(), $quality));
+        if (!$variation->getData()) {
+            throw new NoSupportedEncoderException("There is no known encoder for this data type");
+        }
 
         return $variation;
     }
@@ -392,4 +407,42 @@ class ImageManager
         return $this->filesystem->has($key);
     }
 
+    /**
+     * Get all registered encoders
+     *
+     * @return EncoderInterface[]
+     */
+    public function getEncoders()
+    {
+        return $this->encoders;
+    }
+
+    /**
+     * Set encoders
+     *
+     * @param EncoderInterface[] $encoders
+     * @return $this
+     */
+    public function setEncoders(array $encoders)
+    {
+        $this->encoders = $encoders;
+        return $this;
+    }
+
+    /**
+     * Add an encoder
+     *
+     * @param EncoderInterface $encoder
+     * @param bool             $prepend Prepend to the list instead of appending
+     * @return $this
+     */
+    public function addEncoder(EncoderInterface $encoder, $prepend = false)
+    {
+        if ($prepend) {
+            array_unshift($this->encoders, $encoder);
+        } else {
+            $this->encoders[] = $encoder;
+        }
+        return $this;
+    }
 }

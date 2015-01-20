@@ -3,6 +3,7 @@ namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
+use Bravo3\ImageManager\Services\DataInspector;
 use Bravo3\ImageManager\Traits\FriendTrait;
 
 class Image
@@ -62,31 +63,13 @@ class Image
      *
      * If unknown or no data data is present, null will be returned
      *
+     * @deprecated since 1.1.0 Use DataInspector::getImageFormat() instead
      * @return ImageFormat|null
      */
     public function getDataFormat()
     {
-        if (!$this->data || strlen($this->data) < 5) {
-            return null;
-        }
-
-        // JPEG: FF D8
-        if (ord($this->data{0}) == 0xff && ord($this->data{1}) == 0xd8) {
-            return ImageFormat::JPEG();
-        }
-
-        // PNG: 89 50 4E 47
-        if ((ord($this->data{0}) == 0x89) && substr($this->data, 1, 3) == 'PNG') {
-            return ImageFormat::PNG();
-        }
-
-        // GIF87a: 47 49 46 38 37 61
-        // GIF89a: 47 49 46 38 39 61
-        if (substr($this->data, 0, 6) == 'GIF87a' || substr($this->data, 0, 6) == 'GIF89a') {
-            return ImageFormat::GIF();
-        }
-
-        return null;
+        $inspector = new DataInspector();
+        return $inspector->getImageFormat($this->data);
     }
 
     /**
@@ -97,7 +80,7 @@ class Image
      */
     public function setKey($key)
     {
-        $this->key = $key;
+        $this->key        = $key;
         $this->persistent = false;
 
         return $this;

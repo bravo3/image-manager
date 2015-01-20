@@ -1,22 +1,22 @@
 Image Manager
 =============
-
 A PHP 5.4 image manager intended for cloud use. This image manager is designed to be low-level and work with 'keys' -
 not directly attach to an entity.
 
 Features
 --------
-
 * Easily push and pull images to any remote filesystem (eg Amazon S3)
 * Request an image with specific dimensions - allow the manager to transparently create & store this variation
 * Request that an image dimension exists (will be created if it doesn't), allowing for the storage device to be used as a CDN end-point
-* Use a caching service (PSR-6 compliant) to maintain a knowledge base of image dimensions available to improve performance
+* Use a caching service to maintain a knowledge base of image dimensions available to improve performance
 * Load & save images from memory or a file
 * Convert image format & quality with ease
+* Customisable encoders
+* GD and Imagick support
+* PDF support (via Imagick)
 
 Examples
 --------
-
 ### Storing an image
 
     // Use the local filesystem as a fake remote (replace with S3, etc)
@@ -76,7 +76,6 @@ Examples
 
 Caching
 -------
-
 Because remote storage services have a moderate degree of lag while talking to, it's probably not appropriate to do
 "exists" checks on every image variation during page generation. To avoid this you can either pre-render the image and
 assume it will exist, or using a quick caching mechanic to store an inventory of all images available.
@@ -86,8 +85,22 @@ not exist. Using a database or disk backed key/value storage is recommended (eg 
 
 To use caching, just include a \Bravo3\Cache\PoolInterface implementation in the ImageManager's constructor.
 
+Encoders
+--------
+By default the image manager will use the InterventionEncoder (@see http://image.intervention.io/), which supports
+base image formats. You can switch this for the ImagickEncoder which also allows for PDF documents to be used as an
+input. 
+
+To *add* support for native Imagick, but use Intervention where possible (thus giving you PDF support):
+
+    $im = new ImageManager(...);
+    $im->addEncoder(new ImagickEncoder());
+
+To use only the Imagick encoder:
+
+    $im = new ImageManager($filesystem, $cache_pool, [new ImagickEncoder()]);
+
 Future Considerations
 ---------------------
-
 * Allow for image manipulations (eg add text, rotate, etc)
 * Allow for customisable variation naming schemes

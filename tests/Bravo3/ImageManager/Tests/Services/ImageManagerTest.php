@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\Cache\Ephemeral\EphemeralCachePool;
+use Bravo3\ImageManager\Encoders\ImagickEncoder;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
@@ -21,6 +22,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @small
      * @dataProvider imageProvider
+     * @param string $fn
      */
     public function testLocalImages($fn)
     {
@@ -48,7 +50,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @small
-     * @expectedException \Bravo3\ImageManager\Exceptions\BadImageException
+     * @expectedException \Bravo3\ImageManager\Exceptions\NoSupportedEncoderException
      */
     public function testBadImage()
     {
@@ -73,6 +75,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      * @dataProvider cacheProvider
+     * @param array $cache
      */
     public function testRemote($cache)
     {
@@ -164,6 +167,22 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      */
+    public function testEncodePdf()
+    {
+        $fn = __DIR__.'/../Resources/sample_pdf.pdf';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im->addEncoder(new ImagickEncoder());
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY.'_pdf');
+
+        // Create and render the variation
+        $var = $im->createVariation($source, ImageFormat::PNG(), 90, new ImageDimensions(1200));
+        $im->save($var, self::$tmp_dir.'local/sample_pdf.png');
+    }
+
+    /**
+     * @medium
+     */
     public function testVariationRemoteCreate()
     {
         $fn = __DIR__.'/../Resources/image.png';
@@ -226,6 +245,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     * @param array $cache
      */
     public function testNotFoundImage($cache)
     {
@@ -239,6 +259,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     * @param array $cache
      */
     public function testNotFoundVariation($cache)
     {
@@ -320,6 +341,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException
+     * @param array $cache
      */
     public function testOverwrite($cache)
     {

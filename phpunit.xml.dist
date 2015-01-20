@@ -34,5 +34,4 @@
             <group>integration</group>
         </exclude>
     </groups>
-
 </phpunit>
