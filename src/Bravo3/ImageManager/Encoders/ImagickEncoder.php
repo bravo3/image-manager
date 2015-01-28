@@ -69,7 +69,7 @@ class ImagickEncoder extends AbstractFilesystemEncoder
         $img->setResolution($this->resolution, $this->resolution);
         $img->readImage($src);
 
-        $img->setImageIndex(0);
+        $img->setIteratorIndex(0);
         $img->setImageFormat((string)$output_format->value());
         $img->setImageCompressionQuality($quality);
 
