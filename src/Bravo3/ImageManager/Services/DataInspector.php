@@ -49,4 +49,17 @@ class DataInspector
     {
         return substr($data, 0, 5) == '%PDF-';
     }
+
+    /**
+     * Guess the MIME-type of data specified.
+     *
+     * @return string Guessed MIME-type will be returned
+     */
+    public function guessMimeType(&$data)
+    {
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+
+        return $finfo->buffer($data);
+    }
+
 }
