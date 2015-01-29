@@ -107,13 +107,15 @@ class ImageManager
         try {
 
             if ($image->getMimeType()) {
-                // Set file MIME-type
-                $this->filesystem->getAdapter()->setMetadata(
-                    $image->getKey(),
-                    [
-                        'ContentType' => $image->getMimeType()
-                    ]
-                );
+                if (method_exists($this->filesystem->getAdapter(), 'setMetadata')) {
+                    // Set file MIME-type
+                    $this->filesystem->getAdapter()->setMetadata(
+                        $image->getKey(),
+                        [
+                            'ContentType' => $image->getMimeType()
+                        ]
+                    );
+                }
             }
 
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
