@@ -105,6 +105,17 @@ class ImageManager
         }
 
         try {
+
+            if ($image->getMimeType()) {
+                // Set file MIME-type
+                $this->filesystem->getAdapter()->setMetadata(
+                    $image->getKey(),
+                    [
+                        'ContentType' => $image->getMimeType()
+                    ]
+                );
+            }
+
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
             $this->tag($image->getKey());
