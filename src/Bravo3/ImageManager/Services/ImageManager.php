@@ -14,6 +14,7 @@ use Bravo3\ImageManager\Exceptions\IoException;
 use Bravo3\ImageManager\Exceptions\NoSupportedEncoderException;
 use Bravo3\ImageManager\Exceptions\NotExistsException;
 use Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException;
+use Gaufrette\Adapter\MetadataSupporter;
 use Gaufrette\Exception\FileAlreadyExists;
 use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
@@ -104,20 +105,17 @@ class ImageManager
             throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
         }
 
-        try {
-
+        $adapter = $this->filesystem->getAdapter();
+        if ($adapter instanceof MetadataSupporter) {
+            $metadata = [];
             if ($image->getMimeType()) {
-                if (method_exists($this->filesystem->getAdapter(), 'setMetadata')) {
-                    // Set file MIME-type
-                    $this->filesystem->getAdapter()->setMetadata(
-                        $image->getKey(),
-                        [
-                            'ContentType' => $image->getMimeType()
-                        ]
-                    );
-                }
+                // Set image ContentType on remote filesystem
+                $metadata['ContentType'] = $image->getMimeType();
             }
+            $adapter->setMetadata($image->getKey(), $metadata);
+        }
 
+        try {
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
             $this->tag($image->getKey());

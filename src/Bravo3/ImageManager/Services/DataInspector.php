@@ -53,12 +53,12 @@ class DataInspector
     /**
      * Guess the MIME-type of data specified.
      *
+     * @param string $data
      * @return string Guessed MIME-type will be returned
      */
     public function guessMimeType(&$data)
     {
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
-
         return $finfo->buffer($data);
     }
 

@@ -128,7 +128,7 @@ class Image
         $this->persistent = false;
 
         // Guess MIME-type
-        $inspector = new DataInspector();
+        $inspector              = new DataInspector();
         $this->raw_content_type = $inspector->guessMimeType($this->data);
 
         return $this;
@@ -136,6 +136,7 @@ class Image
 
     /**
      * Return the content-type of data specified
+     *
      * @return string
      */
     public function getMimeType()
