@@ -209,6 +209,25 @@ class ImageManager
         }
     }
 
+    /**
+     * Mark an image as existing or not existing on the remote
+     *
+     * This function has no effect if there is no cache pool.
+     *
+     * @param Image $image
+     * @param bool  $exists
+     * @return $this
+     */
+    public function setImageExists(Image $image, $exists)
+    {
+        if ($exists) {
+            $this->tag($image->getKey());
+        } else {
+            $this->untag($image->getKey());
+        }
+
+        return $this;
+    }
 
     /**
      * Mark a file as existing on the remote
@@ -257,7 +276,6 @@ class ImageManager
         $item = $this->cache_pool->getItem('remote.'.$key);
         return $item->exists();
     }
-
 
     /**
      * Delete an image from the remote
