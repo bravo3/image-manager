@@ -63,13 +63,12 @@ class ImagickEncoder extends AbstractFilesystemEncoder
     public function createVariation(ImageFormat $output_format, $quality, ImageDimensions $dimensions = null)
     {
         $src  = $this->getTempFile($this->data);
-        $dest = $this->getTempFile();
 
         $img = new \Imagick();
         $img->setResolution($this->resolution, $this->resolution);
         $img->readImage($src);
-
         $img->setIteratorIndex(0);
+        $img->flattenImages();
         $img->setImageFormat((string)$output_format->value());
         $img->setImageCompressionQuality($quality);
 
@@ -82,8 +81,7 @@ class ImagickEncoder extends AbstractFilesystemEncoder
                 false
             );
         }
-        $img->writeImage((string)$output_format->value().':'.$dest);
 
-        return file_get_contents($dest);
+        return $img->getImageBlob();
     }
 }
