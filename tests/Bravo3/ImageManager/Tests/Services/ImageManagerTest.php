@@ -183,13 +183,19 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      */
-    public function testEncodePdfBackgroundColorCorrection()
+    public function testPdfEncodeColorCorrection()
     {
         $fn = __DIR__.'/../Resources/sample_pdf2.pdf';
 
-        // Check pdf bg color
+        // Define a pixel within the image which has colour white when alpha
+        // channel ignored. Test ignores alpha channel - See below.
+        $x_px = $y_px = 10;
+
+        // Retrieve PDF background color before encoding
         $imagick_pdf = new \Imagick($fn);
-        $pdf_bg_color = $imagick_pdf->getImageBackgroundColor()->getColorAsString();
+        $before_bg_color = $imagick_pdf
+            ->getImagePixelColor($x_px, $y_px)
+            ->getColor();
 
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $imagick_encoder = new ImagickEncoder();
@@ -204,9 +210,15 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         // Check jpeg bg color
         $imagick_jpeg = new \Imagick($fn_jpeg);
-        $jpeg_bg_color = $imagick_jpeg->getImageBackgroundColor()->getColorAsString();
+        $after_bg_color = $imagick_jpeg
+            ->getImagePixelColor($x_px, $y_px)
+            ->getColor();
 
-        $this->assertEquals($pdf_bg_color, $jpeg_bg_color);
+        // Unset alpha channel
+        unset($before_bg_color['a']);
+        unset($after_bg_color['a']);
+
+        $this->assertEquals($before_bg_color, $after_bg_color);
     }
 
     /**
