@@ -183,6 +183,35 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      */
+    public function testEncodePdfBackgroundColorCorrection()
+    {
+        $fn = __DIR__.'/../Resources/sample_pdf2.pdf';
+
+        // Check pdf bg color
+        $imagick_pdf = new \Imagick($fn);
+        $pdf_bg_color = $imagick_pdf->getImageBackgroundColor()->getColorAsString();
+
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $imagick_encoder = new ImagickEncoder();
+        $im->addEncoder($imagick_encoder);
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY.'_pdf');
+
+        // Create and render the variation
+        $var = $im->createVariation($source, ImageFormat::JPEG(), 90, new ImageDimensions(1200));
+        $fn_jpeg = self::$tmp_dir.'local/sample_pdf2.jpg';
+        $im->save($var, $fn_jpeg);
+
+        // Check jpeg bg color
+        $imagick_jpeg = new \Imagick($fn_jpeg);
+        $jpeg_bg_color = $imagick_jpeg->getImageBackgroundColor()->getColorAsString();
+
+        $this->assertEquals($pdf_bg_color, $jpeg_bg_color);
+    }
+
+    /**
+     * @medium
+     */
     public function testVariationRemoteCreate()
     {
         $fn = __DIR__.'/../Resources/image.png';
@@ -445,4 +474,3 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
 
 }
- 
