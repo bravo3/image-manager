@@ -2,6 +2,7 @@
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\Cache\Ephemeral\EphemeralCachePool;
+use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Encoders\ImagickEncoder;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
@@ -105,6 +106,52 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     * @medium
+     */
+    public function testKeyValidationFail()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), new EphemeralCachePool());
+
+        $image = $im->loadFromFile($fn, self::TEST_KEY);
+        $this->assertTrue($image->isHydrated());
+        $this->assertFalse($image->isPersistent());
+        $im->push($image);
+        $this->assertTrue($image->isPersistent());
+
+        $im->setImageExists($image, false);
+
+        $var = new ImageVariation(self::TEST_KEY, ImageFormat::GIF(), 50);
+        $im->pull($var);
+    }
+
+    /**
+     * @medium
+     */
+    public function testKeyValidationSuccess()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(
+            new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')),
+            new EphemeralCachePool(),
+            [],
+            true
+        );
+
+        $image = $im->loadFromFile($fn, self::TEST_KEY);
+        $this->assertTrue($image->isHydrated());
+        $this->assertFalse($image->isPersistent());
+        $im->push($image);
+        $this->assertTrue($image->isPersistent());
+
+        $im->setImageExists($image, false);
+
+        $var = new ImageVariation(self::TEST_KEY, ImageFormat::GIF(), 50);
+        $im->pull($var);
+    }
+
+    /**
      * Data provider returning a real cache and a null cache
      *
      * @return array
@@ -112,8 +159,8 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     public function cacheProvider()
     {
         return [
-          [null],
-          [new EphemeralCachePool()]
+            [null],
+            [new EphemeralCachePool()]
         ];
     }
 
@@ -212,7 +259,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      */
     public function testNotHydratedPush()
     {
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im  = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $var = new Image(self::TEST_KEY);
         $im->push($var);
     }
@@ -223,7 +270,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      */
     public function testNotHydratedSrc()
     {
-        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $im  = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
         $img = new Image(self::TEST_KEY);
         $im->createVariation($img, ImageFormat::PNG());
     }
@@ -283,40 +330,58 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($source->isHydrated());
         $this->assertTrue($source->isPersistent());
 
-        $var_x = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(20));
+        $var_x = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(20)
+        );
         $im->push($var_x);
 
-        $var_xy_stretch = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(200, null, false));
+        $var_xy_stretch = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(200, null, false)
+        );
         $im->push($var_xy_stretch);
 
-        $var_y = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(null, 200));
+        $var_y = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(null, 200)
+        );
         $im->push($var_y);
 
-        $var_xy = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(100, 200));
+        $var_xy = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200)
+        );
         $im->push($var_xy);
 
-        $var_xy_scale = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(100, 200, false));
+        $var_xy_scale = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, false)
+        );
         $im->push($var_xy_scale);
 
-        $var_xy_stretch = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(100, 200, false));
+        $var_xy_stretch = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, false)
+        );
         $im->push($var_xy_stretch);
 
-        $var_x_noup = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(1000, null, true, false));
+        $var_x_noup = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(1000, null, true, false)
+        );
         $im->push($var_x_noup);
 
-        $var_x_up = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(1000));
+        $var_x_up = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(1000)
+        );
         $im->push($var_x_up);
 
-        $var_g = new ImageVariation(self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
-            new ImageDimensions(100, 200, true, true, true));
+        $var_g = new ImageVariation(
+            self::TEST_KEY_VAR, ImageFormat::JPEG(), 90,
+            new ImageDimensions(100, 200, true, true, true)
+        );
         $im->push($var_g);
     }
 
@@ -328,7 +393,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $fn = __DIR__.'/../Resources/image.png';
         $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
 
-        $source = $im->loadFromFile($fn, self::TEST_KEY_VAR);
+        $source  = $im->loadFromFile($fn, self::TEST_KEY_VAR);
         $resized = $im->createVariation($source, ImageFormat::JPEG(), 90, new ImageDimensions(100));
 
         $this->assertTrue($resized->isHydrated());

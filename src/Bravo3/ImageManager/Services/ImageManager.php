@@ -59,6 +59,14 @@ class ImageManager
     protected $encoders;
 
     /**
+     * If true, we won't trust cache tags saying an image does not exist and will always check with the filesystem
+     * before throwing a NotExistsException
+     *
+     * @var bool
+     */
+    protected $validate_tags;
+
+    /**
      * Create a new image manager
      *
      * If you do not include any encoders, an InterventionEncoder will be automatically added.
@@ -66,12 +74,18 @@ class ImageManager
      * @param Filesystem    $filesystem
      * @param PoolInterface $cache_pool
      * @param array         $encoders
+     * @param bool          $validate_tags
      */
-    public function __construct(Filesystem $filesystem, PoolInterface $cache_pool = null, array $encoders = [])
-    {
-        $this->filesystem = $filesystem;
-        $this->cache_pool = $cache_pool;
-        $this->encoders   = $encoders;
+    public function __construct(
+        Filesystem $filesystem,
+        PoolInterface $cache_pool = null,
+        array $encoders = [],
+        $validate_tags = false
+    ) {
+        $this->filesystem    = $filesystem;
+        $this->cache_pool    = $cache_pool;
+        $this->encoders      = $encoders;
+        $this->validate_tags = $validate_tags;
 
         if (!$this->encoders) {
             $this->addEncoder(new InterventionEncoder());
@@ -160,7 +174,9 @@ class ImageManager
     {
         // Image is a source image
         if ($this->tagExists($image->getKey()) === false) {
-            throw new NotExistsException(self::ERR_NOT_EXISTS);
+            if (!$this->validate_tags || !$this->validateTag($image)) {
+                throw new NotExistsException(self::ERR_NOT_EXISTS);
+            }
         }
 
         try {
@@ -190,14 +206,17 @@ class ImageManager
         } catch (NotExistsException $e) {
             // Variation does not exist, try pulling the parent data and creating the variation
             try {
+                $parent = new Image($image->getKey(true));
+
                 if ($this->tagExists($image->getKey(true)) === false) {
-                    throw new NotExistsException(self::ERR_PARENT_NOT_EXISTS);
+                    if (!$this->validate_tags || !$this->validateTag($parent)) {
+                        throw new NotExistsException(self::ERR_PARENT_NOT_EXISTS);
+                    }
                 }
 
                 $data = $this->filesystem->read($image->getKey(true));
 
                 // Resample
-                $parent = new Image($image->getKey(true));
                 $parent->setData($data);
                 $this->hydrateVariation($parent, $image);
                 $parent->flush();
@@ -473,5 +492,18 @@ class ImageManager
             $this->encoders[] = $encoder;
         }
         return $this;
+    }
+
+    /**
+     * Check with the filesystem if the image exists and update the image key cache
+     *
+     * @param Image $image
+     * @return bool
+     */
+    protected function validateTag(Image $image)
+    {
+        $exists = $this->filesystem->has($image->getKey());
+        $this->setImageExists($image, $exists);
+        return $exists;
     }
 }
