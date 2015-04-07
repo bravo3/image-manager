@@ -230,6 +230,47 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      */
+    public function testPdfEncodeColorCorrection()
+    {
+        $fn = __DIR__.'/../Resources/sample_pdf2.pdf';
+
+        // Define a pixel within the image which has colour white when alpha
+        // channel ignored. Test ignores alpha channel - See below.
+        $x_px = $y_px = 10;
+
+        // Retrieve PDF background color before encoding
+        $imagick_pdf = new \Imagick($fn);
+        $before_bg_color = $imagick_pdf
+            ->getImagePixelColor($x_px, $y_px)
+            ->getColor();
+
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')));
+        $imagick_encoder = new ImagickEncoder();
+        $im->addEncoder($imagick_encoder);
+
+        $source = $im->loadFromFile($fn, self::TEST_KEY.'_pdf');
+
+        // Create and render the variation
+        $var = $im->createVariation($source, ImageFormat::JPEG(), 90, new ImageDimensions(1200));
+        $fn_jpeg = self::$tmp_dir.'local/sample_pdf2.jpg';
+        $im->save($var, $fn_jpeg);
+
+        // Check jpeg bg color
+        $imagick_jpeg = new \Imagick($fn_jpeg);
+        $after_bg_color = $imagick_jpeg
+            ->getImagePixelColor($x_px, $y_px)
+            ->getColor();
+
+        // Unset alpha channel
+        unset($before_bg_color['a']);
+        unset($after_bg_color['a']);
+
+        $this->assertEquals($before_bg_color, $after_bg_color);
+    }
+
+    /**
+     * @medium
+     */
     public function testVariationRemoteCreate()
     {
         $fn = __DIR__.'/../Resources/image.png';
@@ -510,4 +551,3 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
 
 }
- 
