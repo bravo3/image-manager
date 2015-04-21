@@ -1,8 +1,9 @@
 <?php
+
 namespace Bravo3\ImageManager\Entities;
 
 /**
- * A set of rules for resampling images
+ * A set of rules for resampling images.
  */
 class ImageDimensions
 {
@@ -38,7 +39,8 @@ class ImageDimensions
      * @param bool $upscale
      * @param bool $grab
      */
-    public function __construct($width = null, $height = null, $maintain_ratio = true, $upscale = true, $grab = false)
+    public function __construct($width = null, $height = null,
+        $maintain_ratio = true, $upscale = true, $grab = false)
     {
         $this->width          = $width;
         $this->height         = $height;
@@ -48,7 +50,7 @@ class ImageDimensions
     }
 
     /**
-     * Creates a signature containing the dimension specification
+     * Creates a signature containing the dimension specification.
      *
      * @return string
      */
@@ -62,7 +64,7 @@ class ImageDimensions
     }
 
     /**
-     * Get proposed width
+     * Get proposed width.
      *
      * @return int
      */
@@ -72,7 +74,7 @@ class ImageDimensions
     }
 
     /**
-     * Get proposed height
+     * Get proposed height.
      *
      * @return int
      */
@@ -82,9 +84,22 @@ class ImageDimensions
     }
 
     /**
-     * Check if the image can be upscaled
+     * Get image aspect ratio based on the width and height
+     * provided.
      *
-     * @return boolean
+     * Function uses binary calculator division to 3 decimal places.
+     *
+     * @return string
+     */
+    public function getAspectRatio()
+    {
+        return bcdiv($this->width, $this->height, 3);
+    }
+
+    /**
+     * Check if the image can be upscaled.
+     *
+     * @return bool
      */
     public function canUpscale()
     {
@@ -92,9 +107,9 @@ class ImageDimensions
     }
 
     /**
-     * Check if we should maintain the image ratio
+     * Check if we should maintain the image ratio.
      *
-     * @return boolean
+     * @return bool
      */
     public function getMaintainRatio()
     {
@@ -102,9 +117,9 @@ class ImageDimensions
     }
 
     /**
-     * Check if also crop as well as resize
+     * Check if also crop as well as resize.
      *
-     * @return boolean
+     * @return bool
      */
     public function getGrab()
     {
