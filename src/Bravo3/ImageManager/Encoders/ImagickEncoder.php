@@ -56,13 +56,7 @@ class ImagickEncoder extends AbstractFilesystemEncoder
     }
 
     /**
-     * Create an image variation.
-     *
-     * @param ImageFormat     $output_format
-     * @param int             $quality
-     * @param ImageDimensions $dimensions
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function createVariation(ImageFormat $output_format, $quality,
         ImageDimensions $dimensions = null, ImageCropDimensions $crop_dimensions = null)

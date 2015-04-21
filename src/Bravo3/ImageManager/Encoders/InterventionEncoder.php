@@ -1,7 +1,9 @@
 <?php
+
 namespace Bravo3\ImageManager\Encoders;
 
 use Bravo3\ImageManager\Entities\ImageDimensions;
+use Bravo3\ImageManager\Entities\ImageCropDimensions;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
 use Bravo3\ImageManager\Services\DataInspector;
@@ -10,33 +12,31 @@ use Intervention\Image\Image as InterventionImage;
 class InterventionEncoder extends AbstractEncoder
 {
     /**
-     * Check if we support this data-type
+     * Check if we support this data-type.
      *
      * @param string $data
+     *
      * @return bool
      */
     public function supports(&$data)
     {
         $inspector = new DataInspector();
+
         return $inspector->getImageFormat($data) !== null;
     }
 
     /**
-     * Create an image variation
-     *
-     * @param ImageFormat     $output_format
-     * @param int             $quality
-     * @param ImageDimensions $dimensions
-     * @return string
+     * {@inheritdoc}
      */
-    public function createVariation(ImageFormat $output_format, $quality, ImageDimensions $dimensions = null)
+    public function createVariation(ImageFormat $output_format, $quality,
+        ImageDimensions $dimensions = null, ImageCropDimensions $crop_dimensions = null)
     {
         try {
             $img = new InterventionImage($this->data);
         } catch (\Intervention\Image\Exception\InvalidImageDataStringException $e) {
-            throw new BadImageException("Bad image data", 0, $e);
+            throw new BadImageException('Bad image data', 0, $e);
         } catch (\Intervention\Image\Exception\ImageNotFoundException $e) {
-            throw new BadImageException("Not an image", 0, $e);
+            throw new BadImageException('Not an image', 0, $e);
         }
 
         if ($dimensions) {
