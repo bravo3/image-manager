@@ -1,4 +1,5 @@
 <?php
+
 namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
@@ -28,24 +29,25 @@ class Image
     protected $raw_content_type = null;
 
     /**
-     * @var boolean
+     * @var bool
      */
     protected $persistent = false;
 
     /**
      * @param string $key
+     *
      * @throws ImageManagerException
      */
     public function __construct($key)
     {
         if (!$key) {
-            throw new ImageManagerException("Invalid key");
+            throw new ImageManagerException('Invalid key');
         }
         $this->key = $key;
     }
 
     /**
-     * Flush image data from memory
+     * Flush image data from memory.
      *
      * @param bool $collect_garbage
      */
@@ -59,23 +61,26 @@ class Image
     }
 
     /**
-     * Check the data data for the image type
+     * Check the data data for the image type.
      *
      * If unknown or no data data is present, null will be returned
      *
      * @deprecated since 1.1.0 Use DataInspector::getImageFormat() instead
+     *
      * @return ImageFormat|null
      */
     public function getDataFormat()
     {
         $inspector = new DataInspector();
+
         return $inspector->getImageFormat($this->data);
     }
 
     /**
-     * Set the remote key
+     * Set the remote key.
      *
      * @param string $key
+     *
      * @return $this
      */
     public function setKey($key)
@@ -87,7 +92,7 @@ class Image
     }
 
     /**
-     * Get the remote key
+     * Get the remote key.
      *
      * @return string
      */
@@ -97,9 +102,9 @@ class Image
     }
 
     /**
-     * Check if the image is known to exist on the remote
+     * Check if the image is known to exist on the remote.
      *
-     * @return boolean
+     * @return bool
      */
     public function isPersistent()
     {
@@ -107,7 +112,7 @@ class Image
     }
 
     /**
-     * Check if the image data has been loaded
+     * Check if the image data has been loaded.
      *
      * @return bool
      */
@@ -117,9 +122,10 @@ class Image
     }
 
     /**
-     * Set image data
+     * Set image data.
      *
      * @param string $data
+     *
      * @return $this
      */
     public function setData($data)
@@ -135,7 +141,7 @@ class Image
     }
 
     /**
-     * Return the content-type of data specified
+     * Return the content-type of data specified.
      *
      * @return string
      */
@@ -145,7 +151,7 @@ class Image
     }
 
     /**
-     * Get image data
+     * Get image data.
      *
      * @return string
      */

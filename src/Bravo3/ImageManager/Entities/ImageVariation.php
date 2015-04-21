@@ -1,4 +1,5 @@
 <?php
+
 namespace Bravo3\ImageManager\Entities;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
@@ -13,30 +14,36 @@ class ImageVariation extends Image
     protected $__friends = ['Bravo3\ImageManager\Services\ImageManager'];
 
     /**
-     * Create a new image variation
+     * Create a new image variation.
      *
-     * @param string          $key
-     * @param ImageFormat     $format
-     * @param int             $quality
-     * @param ImageDimensions $dimensions
+     * @param string              $key
+     * @param ImageFormat         $format
+     * @param int                 $quality
+     * @param ImageDimensions     $dimensions
+     * @param ImageCropDimensions $crop_dimensions
+     *
      * @throws ImageManagerException
      */
-    function __construct(
+    public function __construct(
         $key,
         ImageFormat $format,
         $quality = self::DEFAULT_QUALITY,
-        ImageDimensions $dimensions = null
+        ImageDimensions $dimensions = null,
+        ImageCropDimensions $crop_dimensions = null
     ) {
         parent::__construct($key);
+
         $this->dimensions = $dimensions;
         $this->format     = $format;
         $this->quality    = $quality;
+        $this->crop_dimensions = $crop_dimensions;
     }
 
     /**
-     * Get variation or image key
+     * Get variation or image key.
      *
      * @param bool $parent
+     *
      * @return string
      */
     public function getKey($parent = false)
@@ -50,7 +57,7 @@ class ImageVariation extends Image
     }
 
     /**
-     * Get Dimensions
+     * Get Dimensions.
      *
      * @return ImageDimensions
      */
@@ -60,7 +67,17 @@ class ImageVariation extends Image
     }
 
     /**
-     * Get Format
+     * Get Crop Dimensions.
+     *
+     * @return ImageCropDimensions
+     */
+    public function getCropDimensions()
+    {
+        return $this->crop_dimensions;
+    }
+
+    /**
+     * Get Format.
      *
      * @return ImageFormat
      */
@@ -70,7 +87,7 @@ class ImageVariation extends Image
     }
 
     /**
-     * Get Quality
+     * Get Quality.
      *
      * @return int
      */
@@ -80,14 +97,16 @@ class ImageVariation extends Image
     }
 
     /**
-     * Creates a signature based on the variations applied
+     * Creates a signature based on the variations applied.
      *
      * @return string
      */
     public function __toString()
     {
-        $out = 'q'.($this->getQuality() ?: self::DEFAULT_QUALITY).',d'.($this->getDimensions() ?: '--').
-               '.'.(string)$this->getFormat()->value();
+        $out = 'q'.($this->getQuality() ?: self::DEFAULT_QUALITY).
+               ',d'.($this->getDimensions() ?: '--').
+               ',c'.($this->getCropDimensions() ?: '--').
+               '.'.(string) $this->getFormat()->value();
 
         return $out;
     }

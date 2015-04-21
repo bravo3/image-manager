@@ -1,4 +1,5 @@
 <?php
+
 namespace Bravo3\ImageManager\Services;
 
 use Bravo3\Cache\PoolInterface;
@@ -6,6 +7,7 @@ use Bravo3\ImageManager\Encoders\EncoderInterface;
 use Bravo3\ImageManager\Encoders\InterventionEncoder;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
+use Bravo3\ImageManager\Entities\ImageCropDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\BadImageException;
@@ -20,7 +22,7 @@ use Gaufrette\Exception\FileNotFound as FileNotFoundException;
 use Gaufrette\Filesystem;
 
 /**
- * An image manager for cloud computing
+ * An image manager for cloud computing.
  *
  * The concept behind this is to store your images on a cloud storage device (such as S3) and to create variations
  * either ahead of time or in real-time, keeping them accessible via a CDN through your cloud storage.
@@ -30,20 +32,20 @@ use Gaufrette\Filesystem;
  */
 class ImageManager
 {
-    const ERR_NOT_HYDRATED      = "Image is not hydrated";
-    const ERR_NOT_EXISTS        = "Image does not exist";
-    const ERR_PARENT_NOT_EXISTS = "Parent image does not exist";
-    const ERR_ALREADY_EXISTS    = "Object already exists on remote";
+    const ERR_NOT_HYDRATED      = 'Image is not hydrated';
+    const ERR_NOT_EXISTS        = 'Image does not exist';
+    const ERR_PARENT_NOT_EXISTS = 'Parent image does not exist';
+    const ERR_ALREADY_EXISTS    = 'Object already exists on remote';
 
     /**
-     * A filesystem to store all images on
+     * A filesystem to store all images on.
      *
      * @var Filesystem
      */
     protected $filesystem;
 
     /**
-     * A high-speed caching pool to store meta-data on stored objects
+     * A high-speed caching pool to store meta-data on stored objects.
      *
      * This cache pool is used to remember if objects exist without the need to hit the image pool. If you are using a
      * filesystem image pool then there is little use for a cache pool, however If you're using an S3 or similar, then
@@ -59,7 +61,7 @@ class ImageManager
     protected $encoders;
 
     /**
-     * Create a new image manager
+     * Create a new image manager.
      *
      * If you do not include any encoders, an InterventionEncoder will be automatically added.
      *
@@ -79,13 +81,15 @@ class ImageManager
     }
 
     /**
-     * Push a local image/variation to the remote
+     * Push a local image/variation to the remote.
      *
      * If it is not hydrated this function will throw an exception
      *
      * @param Image $image
      * @param bool  $overwrite
+     *
      * @return $this
+     *
      * @throws ImageManagerException
      * @throws ObjectAlreadyExistsException
      * @throws \Exception
@@ -119,7 +123,6 @@ class ImageManager
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
             $this->tag($image->getKey());
-
         } catch (FileAlreadyExists $e) {
             $this->tag($image->getKey());
             throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
@@ -129,14 +132,16 @@ class ImageManager
     }
 
     /**
-     * Get an image/variation from the remote
+     * Get an image/variation from the remote.
      *
      * If this image is a variation that does not exist, an attempt will be made to retrieve the parent first
      * then create the variation. The variation should be optionally pushed if it's Image::isPersistent() function
      * returns false.
      *
      * @param Image $image
+     *
      * @return $this
+     *
      * @throws ImageManagerException
      */
     public function pull(Image $image)
@@ -151,9 +156,10 @@ class ImageManager
     }
 
     /**
-     * Pull a source (or variation) image
+     * Pull a source (or variation) image.
      *
      * @param Image $image
+     *
      * @throws NotExistsException
      */
     protected function pullSource(Image $image)
@@ -167,7 +173,6 @@ class ImageManager
             // Get source data
             $image->setData($this->filesystem->read($image->getKey()));
             $image->__friendSet('persistent', true);
-
         } catch (FileNotFoundException $e) {
             // Image not found
             $this->untag($image->getKey());
@@ -176,9 +181,10 @@ class ImageManager
     }
 
     /**
-     * Pull a variation image, if the variation does not exist, try pulling the source and creating the variation
+     * Pull a variation image, if the variation does not exist, try pulling the source and creating the variation.
      *
      * @param ImageVariation $image
+     *
      * @throws NotExistsException
      */
     protected function pullVariation(ImageVariation $image)
@@ -186,7 +192,6 @@ class ImageManager
         try {
             // First, check if the variation exists on the remote
             $this->pullSource($image);
-
         } catch (NotExistsException $e) {
             // Variation does not exist, try pulling the parent data and creating the variation
             try {
@@ -201,7 +206,6 @@ class ImageManager
                 $parent->setData($data);
                 $this->hydrateVariation($parent, $image);
                 $parent->flush();
-
             } catch (FileNotFoundException $e) {
                 // No image exists
                 throw new NotExistsException(self::ERR_PARENT_NOT_EXISTS);
@@ -210,12 +214,13 @@ class ImageManager
     }
 
     /**
-     * Mark an image as existing or not existing on the remote
+     * Mark an image as existing or not existing on the remote.
      *
      * This function has no effect if there is no cache pool.
      *
      * @param Image $image
      * @param bool  $exists
+     *
      * @return $this
      */
     public function setImageExists(Image $image, $exists)
@@ -230,7 +235,7 @@ class ImageManager
     }
 
     /**
-     * Mark a file as existing on the remote
+     * Mark a file as existing on the remote.
      *
      * @param string $key
      */
@@ -245,7 +250,7 @@ class ImageManager
     }
 
     /**
-     * Mark a file as absent on the remote
+     * Mark a file as absent on the remote.
      *
      * @param string $key
      */
@@ -260,44 +265,49 @@ class ImageManager
     }
 
     /**
-     * Check if a file exists on the remote
+     * Check if a file exists on the remote.
      *
      * Returns null if caching isn't available (and unsure), else a boolean value
      *
      * @param string $key
+     *
      * @return bool|null
      */
     protected function tagExists($key)
     {
         if (!$this->cache_pool) {
-            return null;
+            return;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
+
         return $item->exists();
     }
 
     /**
-     * Delete an image from the remote
+     * Delete an image from the remote.
      *
      * @param Image $image
+     *
      * @return $this
      */
     public function remove(Image $image)
     {
         $this->filesystem->delete($image->getKey());
         $this->untag($image->getKey());
+
         return $this;
     }
 
     /**
-     * Save the image to the local filesystem
+     * Save the image to the local filesystem.
      *
      * The extension of the filename is ignored, either the original format or the variation format will be used.
      * If the image is not hydrated a pull will be attempted.
      *
      * @param Image  $image
      * @param string $filename Path to save the image
+     *
      * @return $this
      */
     public function save(Image $image, $filename)
@@ -313,13 +323,15 @@ class ImageManager
     }
 
     /**
-     * Hydrate and render an image variation with parent data
+     * Hydrate and render an image variation with parent data.
      *
      * You can use this to create a variation with a source image
      *
      * @param Image          $parent
      * @param ImageVariation $variation
+     *
      * @return ImageVariation
+     *
      * @throws BadImageException
      * @throws ImageManagerException
      */
@@ -344,7 +356,12 @@ class ImageManager
             if ($encoder->supports($input)) {
                 $encoder->setData($input);
                 $variation->setData(
-                    $encoder->createVariation($variation->getFormat(), $quality, $variation->getDimensions())
+                    $encoder->createVariation(
+                        $variation->getFormat(),
+                        $quality,
+                        $variation->getDimensions(),
+                        $variation->getCropDimensions()
+                    )
                 );
                 $encoder->setData(null);
                 break;
@@ -352,42 +369,46 @@ class ImageManager
         }
 
         if (!$variation->getData()) {
-            throw new NoSupportedEncoderException("There is no known encoder for this data type");
+            throw new NoSupportedEncoderException('There is no known encoder for this data type');
         }
 
         return $variation;
     }
 
     /**
-     * Create a new image variation from a local source image
+     * Create a new image variation from a local source image.
      *
      * @param Image           $source
      * @param ImageFormat     $format
      * @param int             $quality
      * @param ImageDimensions $dimensions
+     *
      * @return ImageVariation
      */
     public function createVariation(
         Image $source,
         ImageFormat $format,
         $quality = ImageVariation::DEFAULT_QUALITY,
-        ImageDimensions $dimensions = null
+        ImageDimensions $dimensions = null,
+        ImageCropDimensions $crop_dimensions = null
     ) {
-        $var = new ImageVariation($source->getKey(), $format, $quality, $dimensions);
+        $var = new ImageVariation($source->getKey(), $format, $quality, $dimensions, $crop_dimensions);
+
         return $this->hydrateVariation($source, $var);
     }
 
     /**
-     * Create a new image from a filename and hydrate it
+     * Create a new image from a filename and hydrate it.
      *
      * @param string $filename
      * @param string $key
+     *
      * @return Image
      */
     public function loadFromFile($filename, $key = null)
     {
         if (!is_readable($filename)) {
-            throw new IoException("File not readable: ".$filename);
+            throw new IoException('File not readable: '.$filename);
         }
 
         if (!$key) {
@@ -401,10 +422,11 @@ class ImageManager
     }
 
     /**
-     * Create a new image from memory and hydrate it
+     * Create a new image from memory and hydrate it.
      *
      * @param string $data
      * @param string $key
+     *
      * @return Image
      */
     public function load($data, $key)
@@ -416,13 +438,14 @@ class ImageManager
     }
 
     /**
-     * Check if an image exists on the remote
+     * Check if an image exists on the remote.
      *
      * This will check the cache pool if one exists, else it will talk to the remote filesystem to check if
      * the image exists.
      *
      * @param Image $image
-     * @return boolean
+     *
+     * @return bool
      */
     public function exists(Image $image)
     {
@@ -437,7 +460,7 @@ class ImageManager
     }
 
     /**
-     * Get all registered encoders
+     * Get all registered encoders.
      *
      * @return EncoderInterface[]
      */
@@ -447,22 +470,25 @@ class ImageManager
     }
 
     /**
-     * Set encoders
+     * Set encoders.
      *
      * @param EncoderInterface[] $encoders
+     *
      * @return $this
      */
     public function setEncoders(array $encoders)
     {
         $this->encoders = $encoders;
+
         return $this;
     }
 
     /**
-     * Add an encoder
+     * Add an encoder.
      *
      * @param EncoderInterface $encoder
      * @param bool             $prepend Prepend to the list instead of appending
+     *
      * @return $this
      */
     public function addEncoder(EncoderInterface $encoder, $prepend = false)
@@ -472,6 +498,7 @@ class ImageManager
         } else {
             $this->encoders[] = $encoder;
         }
+
         return $this;
     }
 }
