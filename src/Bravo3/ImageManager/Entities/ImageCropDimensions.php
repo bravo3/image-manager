@@ -55,7 +55,7 @@ class ImageCropDimensions
     }
 
     /**
-     * Set x.
+     * Set the start pixel in the x-axis for the horizontal crop of the image.
      *
      * @param int $x
      *
@@ -69,7 +69,7 @@ class ImageCropDimensions
     }
 
     /**
-     * Set y.
+     * Set the start pixel in the y-axis for the vertical crop of the image.
      *
      * @param int $y
      *
@@ -83,7 +83,8 @@ class ImageCropDimensions
     }
 
     /**
-     * Set width.
+     * Sets the horizontal boundary of the cropping dimensions taking only an
+     * integer relative to the left of the image in pixels, starting from a zero-indexed row.
      *
      * @param int $width
      *
@@ -97,7 +98,8 @@ class ImageCropDimensions
     }
 
     /**
-     * Set height.
+     * Sets the vertical boundary of the cropping dimensions taking only an
+     * integer relative to the top of the image in pixels, starting from a zero-indexed row.
      *
      * @param int $height
      *
