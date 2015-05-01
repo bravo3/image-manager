@@ -62,7 +62,7 @@ class ImageManager
 
     /**
      * If true, we won't trust cache tags saying an image does not exist and will always check with the filesystem
-     * before throwing a NotExistsException
+     * before throwing a NotExistsException.
      *
      * @var bool
      */
@@ -167,6 +167,17 @@ class ImageManager
         }
 
         return $this;
+    }
+
+    public function pullMetadata(Image $image)
+    {
+        $img_source_key = '';
+
+        // If the $image is a varation, refer to its parent
+        // for the metadata.
+        if ($image instanceof ImageVariation) {
+            $img_source_key = $image->getKey(true);
+        }
     }
 
     /**
@@ -522,15 +533,17 @@ class ImageManager
     }
 
     /**
-     * Check with the filesystem if the image exists and update the image key cache
+     * Check with the filesystem if the image exists and update the image key cache.
      *
      * @param Image $image
+     *
      * @return bool
      */
     protected function validateTag(Image $image)
     {
         $exists = $this->filesystem->has($image->getKey());
         $this->setImageExists($image, $exists);
+
         return $exists;
     }
 }
