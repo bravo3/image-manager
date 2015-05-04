@@ -2,6 +2,7 @@
 
 namespace Bravo3\ImageManager\Entities;
 
+use Bravo3\ImageManager\Entities\Interfaces\SerialisableInterface;
 use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 
@@ -10,7 +11,7 @@ use Bravo3\ImageManager\Enum\ImageFormat;
  * properties. ImageManager stores the serialized metadata object within
  * the cache layer.
  */
-class ImageMetadata
+class ImageMetadata implements SerialisableInterface
 {
     /**
      * Internet media type.
@@ -165,5 +166,42 @@ class ImageMetadata
         $this->dimensions = $dimensions;
 
         return $this;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function serialise()
+    {
+        return json_encode([
+            'mimetype'    => $this->mimetype,
+            'format'      => $this->format->value(),
+            'dpi'         => $this->dpi,
+            'orientation' => $this->orientation->value(),
+            'dimensions'  => $this->dimensions->serialise(),
+        ]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function deserialise($json)
+    {
+        if (empty($json)) {
+            throw \InvalidArgumentException('Json string is empty');
+        }
+
+        $object_data = json_decode($json);
+
+        $instance = new static();
+        $instance
+            ->setMimeType($object_data['mimetype'])
+            ->setFormat(ImageFormat::memberByValue($object_data['format']))
+            ->setDpi($object_data['dpi'])
+            ->setOrientation(ImageOrientation::memberByValue($object_data['orientation']))
+            ->setDimensions(ImageDimensions::deserialise($object_data['dimensions']))
+        ;
+
+        return $instance;
     }
 }

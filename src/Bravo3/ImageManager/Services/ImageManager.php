@@ -6,6 +6,7 @@ use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Encoders\EncoderInterface;
 use Bravo3\ImageManager\Encoders\InterventionEncoder;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageMetadata;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageCropDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
@@ -169,15 +170,26 @@ class ImageManager
         return $this;
     }
 
+    /**
+     * Get meta information about the source image from the cache layer.
+     *
+     * @param Image $image
+     *
+     * @return ImageMetadata
+     */
     public function pullMetadata(Image $image)
     {
-        $img_source_key = '';
+        $img_key = $image->getKey();
 
         // If the $image is a varation, refer to its parent
         // for the metadata.
         if ($image instanceof ImageVariation) {
-            $img_source_key = $image->getKey(true);
+            $img_key = $image->getKey(true);
         }
+
+        $item = $this->cache_pool->getItem('remote.'.$img_key);
+
+        return ImageMetadata::buildFromRedisCacheItem($item);
     }
 
     /**
