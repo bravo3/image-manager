@@ -151,7 +151,7 @@ class ImageDimensions implements SerialisableInterface
             throw \InvalidArgumentException('Json string is empty');
         }
 
-        $object_data = json_decode($json);
+        $object_data = json_decode($json, true);
 
         $instance = new static(
             $object_data['width'],

@@ -1,23 +1,25 @@
 <?php
+
 namespace Bravo3\ImageManager\Services;
 
 use Bravo3\ImageManager\Enum\ImageFormat;
 
 /**
- * Inspects data for common formats
+ * Inspects data for common formats.
  */
 class DataInspector
 {
     /**
-     * Test to see if we can determine the image format
+     * Test to see if we can determine the image format.
      *
      * @param string $data
+     *
      * @return ImageFormat|null
      */
     public function getImageFormat(&$data)
     {
         if (!$data || strlen($data) < 5) {
-            return null;
+            return;
         }
 
         // JPEG: FF D8
@@ -36,13 +38,14 @@ class DataInspector
             return ImageFormat::GIF();
         }
 
-        return null;
+        return;
     }
 
     /**
-     * Check if the data is a PDF document
+     * Check if the data is a PDF document.
      *
      * @param string $data
+     *
      * @return bool
      */
     public function isPdf(&$data)
@@ -54,12 +57,13 @@ class DataInspector
      * Guess the MIME-type of data specified.
      *
      * @param string $data
+     *
      * @return string Guessed MIME-type will be returned
      */
     public function guessMimeType(&$data)
     {
         $finfo = new \finfo(FILEINFO_MIME_TYPE);
+
         return $finfo->buffer($data);
     }
-
 }

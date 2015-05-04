@@ -70,6 +70,14 @@ class ImageManager
     protected $validate_tags;
 
     /**
+     * An associated array with unique Image key as the key and ImageMetadata objects
+     * as values.
+     *
+     * @var array
+     */
+    protected static $metadata_cache;
+
+    /**
      * Create a new image manager.
      *
      * If you do not include any encoders, an InterventionEncoder will be automatically added.
@@ -134,12 +142,19 @@ class ImageManager
             $adapter->setMetadata($image->getKey(), $metadata);
         }
 
+        // Retrieve source image metadata
+        $metadata = null;
+        if (!($image instanceof ImageVariation)) {
+            $image_manipulation = new ImageManipulation();
+            $metadata = $image_manipulation->getImageMetadata($image);
+        }
+
         try {
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
-            $this->tag($image->getKey());
+            $this->tag($image->getKey(), $metadata);
         } catch (FileAlreadyExists $e) {
-            $this->tag($image->getKey());
+            $this->tag($image->getKey(), $metadata);
             throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
         }
 
@@ -177,7 +192,7 @@ class ImageManager
      *
      * @return ImageMetadata
      */
-    public function pullMetadata(Image $image)
+    public function getMetadata(Image $image)
     {
         $img_key = $image->getKey();
 
@@ -187,9 +202,19 @@ class ImageManager
             $img_key = $image->getKey(true);
         }
 
+        // Retrieve from cache array if image metadata exists
+        if (isset(self::$metadata_cache[$img_key])) {
+            return self::$metadata_cache[$img_key];
+        }
+
         $item = $this->cache_pool->getItem('remote.'.$img_key);
 
-        return ImageMetadata::buildFromRedisCacheItem($item);
+        $metadata = ImageMetadata::deserialise($item->get());
+
+        // Set cache item
+        self::$metadata_cache[$img_key] = $metadata;
+
+        return $metadata;
     }
 
     /**
@@ -278,17 +303,26 @@ class ImageManager
 
     /**
      * Mark a file as existing on the remote.
+     * If metadata object is populated, that metadata will be stored
+     * against the image tag stored in the cache layer.
      *
-     * @param string $key
+     * @param string        $key
+     * @param ImageMetadata $metadata
      */
-    protected function tag($key)
+    protected function tag($key, ImageMetadata $metadata = null)
     {
         if (!$this->cache_pool) {
             return;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
-        $item->set(1, null);
+
+        $value = 1;
+        if (null !== $metadata) {
+            $value = $metadata->serialise();
+        }
+
+        $item->set($value, null);
     }
 
     /**

@@ -3,15 +3,18 @@
 namespace Bravo3\ImageManager\Services;
 
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageMetadata;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Enum\ImageOrientation;
-use Bravo3\ImageManager\Exceptions\BadImageException;
+use Bravo3\ImageManager\Enum\ImageFormat;
 
 /**
  * Image manipulation service.
  */
 class ImageManipulation
 {
+    const ERR_SOURCE_IMAGE = 'Only source Image object can be used for retrieving metadata.';
+
     /**
      * Get orientation of an image from the supplied Image object.
      * NOTE: This function doesn't read EXIF data of the file to detect orientation
@@ -21,10 +24,10 @@ class ImageManipulation
      *
      * @return ImageOrientation
      */
-    public function getImageOrientation(Image $image)
+    protected function getImageOrientation(Image $image)
     {
-        if (empty($image->getData())) {
-            throw new BadImageException();
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException(ImageManager::ERR_NOT_HYDRATED);
         }
 
         $img = new \Imagick();
@@ -46,10 +49,10 @@ class ImageManipulation
      *
      * @return ImageDimensions
      */
-    public function getImageDimensions(Image $image)
+    protected function getImageDimensions(Image $image)
     {
-        if (empty($image->getData())) {
-            throw new BadImageException();
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException(ImageManager::ERR_NOT_HYDRATED);
         }
 
         $img = new \Imagick();
@@ -72,10 +75,10 @@ class ImageManipulation
      *
      * @return ImageDimensions
      */
-    public function getImageResolution(Image $image)
+    protected function getImageResolution(Image $image)
     {
-        if (empty($image->getData())) {
-            throw new BadImageException();
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException(ImageManager::ERR_NOT_HYDRATED);
         }
 
         $img = new \Imagick();
@@ -88,5 +91,41 @@ class ImageManipulation
         );
 
         return $dimensions;
+    }
+
+    /**
+     * @param Image $image
+     *
+     * @return ImageMetadata
+     */
+    public function getImageMetadata(Image $image)
+    {
+        if (!$image->isHydrated()) {
+            throw new ImageManagerException(ImageManager::ERR_NOT_HYDRATED);
+        }
+
+        if ($image instanceof ImageVariation) {
+            throw new ImageManagerException(self::ERR_SOURCE_IMAGE);
+        }
+
+        $metadata       = new ImageMetadata();
+        $data_inspector = new DataInspector();
+        $data           = $image->getData();
+
+        if ($data_inspector->isPdf($data)) {
+            $format = ImageFormat::PDF();
+        } else {
+            $format = $data_inspector->getImageFormat($data);
+        }
+
+        $metadata
+            ->setMimetype($data_inspector->guessMimeType($data))
+            ->setFormat($format)
+            ->setResolution($this->getImageResolution($image))
+            ->setOrientation($this->getImageOrientation($image))
+            ->setDimensions($this->getImageDimensions($image))
+        ;
+
+        return $metadata;
     }
 }

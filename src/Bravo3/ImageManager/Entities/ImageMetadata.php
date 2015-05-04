@@ -5,6 +5,7 @@ namespace Bravo3\ImageManager\Entities;
 use Bravo3\ImageManager\Entities\Interfaces\SerialisableInterface;
 use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Exceptions\InvalidImageMetadataException;
 
 /**
  * Purpose of the metadata class is to keep the source image
@@ -30,9 +31,9 @@ class ImageMetadata implements SerialisableInterface
     /**
      * Image resolution.
      *
-     * @var int
+     * @var ImageDimensions
      */
-    protected $dpi;
+    protected $resolution = null;
 
     /**
      * Orientation of the image.
@@ -65,7 +66,7 @@ class ImageMetadata implements SerialisableInterface
      *
      * @return self
      */
-    protected function setMimetype($mimetype)
+    public function setMimetype($mimetype)
     {
         $this->mimetype = $mimetype;
 
@@ -89,7 +90,7 @@ class ImageMetadata implements SerialisableInterface
      *
      * @return self
      */
-    protected function setFormat(ImageFormat $format)
+    public function setFormat(ImageFormat $format)
     {
         $this->format = $format;
 
@@ -99,23 +100,23 @@ class ImageMetadata implements SerialisableInterface
     /**
      * Gets the Image resolution.
      *
-     * @return int
+     * @return ImageDimensions
      */
-    public function getDpi()
+    public function getResolution()
     {
-        return $this->dpi;
+        return $this->resolution;
     }
 
     /**
      * Sets the Image resolution.
      *
-     * @param int $dpi the dpi
+     * @param ImageDimensions
      *
      * @return self
      */
-    protected function setDpi($dpi)
+    public function setResolution(ImageDimensions $resolution)
     {
-        $this->dpi = $dpi;
+        $this->resolution = $resolution;
 
         return $this;
     }
@@ -137,7 +138,7 @@ class ImageMetadata implements SerialisableInterface
      *
      * @return self
      */
-    protected function setOrientation(ImageOrientation $orientation)
+    public function setOrientation(ImageOrientation $orientation)
     {
         $this->orientation = $orientation;
 
@@ -161,7 +162,7 @@ class ImageMetadata implements SerialisableInterface
      *
      * @return self
      */
-    protected function setDimensions(ImageDimensions $dimensions)
+    public function setDimensions(ImageDimensions $dimensions)
     {
         $this->dimensions = $dimensions;
 
@@ -174,11 +175,11 @@ class ImageMetadata implements SerialisableInterface
     public function serialise()
     {
         return json_encode([
-            'mimetype'    => $this->mimetype,
-            'format'      => $this->format->value(),
-            'dpi'         => $this->dpi,
-            'orientation' => $this->orientation->value(),
-            'dimensions'  => $this->dimensions->serialise(),
+            'mimetype'    => $this->getMimetype(),
+            'format'      => $this->getFormat()->value(),
+            'resolution'  => $this->getResolution()->serialise(),
+            'orientation' => $this->getOrientation()->value(),
+            'dimensions'  => $this->getDimensions()->serialise(),
         ]);
     }
 
@@ -188,16 +189,20 @@ class ImageMetadata implements SerialisableInterface
     public static function deserialise($json)
     {
         if (empty($json)) {
-            throw \InvalidArgumentException('Json string is empty');
+            throw new InvalidImageMetadataException();
         }
 
-        $object_data = json_decode($json);
+        $object_data = json_decode($json, true);
+
+        if (isset($object_data['mimetype'])) {
+            throw new InvalidImageMetadataException();
+        }
 
         $instance = new static();
         $instance
             ->setMimeType($object_data['mimetype'])
             ->setFormat(ImageFormat::memberByValue($object_data['format']))
-            ->setDpi($object_data['dpi'])
+            ->setResolution(ImageDimensions::deserialise($object_data['resolution']))
             ->setOrientation(ImageOrientation::memberByValue($object_data['orientation']))
             ->setDimensions(ImageDimensions::deserialise($object_data['dimensions']))
         ;
