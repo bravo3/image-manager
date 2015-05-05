@@ -154,11 +154,11 @@ class ImageDimensions implements SerialisableInterface
         $object_data = json_decode($json, true);
 
         $instance = new static(
-            $object_data['width'],
-            $object_data['height'],
-            $object_data['maintain-ratio'],
-            $object_data['upscale'],
-            $object_data['grab']
+            isset($object_data['width']) ? $object_data['width'] : null,
+            isset($object_data['height']) ? $object_data['height'] : null,
+            isset($object_data['maintain-ratio']) ? $object_data['maintain-ratio'] : null,
+            isset($object_data['upscale']) ? $object_data['upscale'] : null,
+            isset($object_data['grab']) ? $object_data['grab'] : null
         );
 
         return $instance;

@@ -194,6 +194,7 @@ class ImageMetadata implements SerialisableInterface
 
         $object_data = json_decode($json, true);
 
+        // MIME-type is an minimum requirement for metadata
         if (!isset($object_data['mimetype'])) {
             throw new InvalidImageMetadataException();
         }
@@ -201,10 +202,10 @@ class ImageMetadata implements SerialisableInterface
         $instance = new static();
         $instance
             ->setMimeType($object_data['mimetype'])
-            ->setFormat(ImageFormat::memberByValue($object_data['format']))
-            ->setResolution(ImageDimensions::deserialise($object_data['resolution']))
-            ->setOrientation(ImageOrientation::memberByValue($object_data['orientation']))
-            ->setDimensions(ImageDimensions::deserialise($object_data['dimensions']))
+            ->setFormat(isset($object_data['format']) ? ImageFormat::memberByValue($object_data['format']) : null)
+            ->setResolution(isset($object_data['resolution']) ? ImageDimensions::deserialise($object_data['resolution']) : null)
+            ->setOrientation(isset($object_data['orientation']) ? ImageOrientation::memberByValue($object_data['orientation']) : null)
+            ->setDimensions(isset($object_data['dimensions']) ? ImageDimensions::deserialise($object_data['dimensions']) : null)
         ;
 
         return $instance;
