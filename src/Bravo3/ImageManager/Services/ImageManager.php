@@ -145,7 +145,7 @@ class ImageManager
         // Retrieve source image metadata
         $metadata = null;
         if (!($image instanceof ImageVariation)) {
-            $image_manipulation = new ImageManipulation();
+            $image_manipulation = new ImageInspector();
             $metadata = $image_manipulation->getImageMetadata($image);
         }
 
@@ -311,7 +311,7 @@ class ImageManager
     protected function tag($key, ImageMetadata $metadata = null)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
@@ -333,7 +333,7 @@ class ImageManager
     protected function untag($key)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
@@ -352,7 +352,7 @@ class ImageManager
     protected function tagExists($key)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);

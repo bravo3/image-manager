@@ -9,9 +9,9 @@ use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 
 /**
- * Image manipulation service.
+ * Image inspector service.
  */
-class ImageManipulation
+class ImageInspector
 {
     const ERR_SOURCE_IMAGE = 'Only source Image object can be used for retrieving metadata.';
 

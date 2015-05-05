@@ -1,14 +1,16 @@
 <?php
+
 namespace Bravo3\ImageManager\Tests\Services;
 
 use Bravo3\Cache\Ephemeral\EphemeralCachePool;
-use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Encoders\ImagickEncoder;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Services\ImageManager;
+use Bravo3\ImageManager\Services\ImageInspector;
 use Gaufrette\Adapter\Local as LocalAdapter;
 use Gaufrette\Filesystem;
 
@@ -19,10 +21,10 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     const TEST_KEY     = 'image';
     const TEST_KEY_VAR = 'image_var';
 
-
     /**
      * @small
      * @dataProvider imageProvider
+     *
      * @param string $fn
      */
     public function testLocalImages($fn)
@@ -38,16 +40,15 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
 
         $hydrated_memory = memory_get_usage();
 
-        $this->assertGreaterThanOrEqual($start_memory, $hydrated_memory, "Hydration increased memory consumption");
+        $this->assertGreaterThanOrEqual($start_memory, $hydrated_memory, 'Hydration increased memory consumption');
 
         $im->save($image, self::$tmp_dir.'local/'.basename($fn));
 
         gc_collect_cycles();
         $saved_memory = memory_get_usage();
         $image->flush();
-        $this->assertLessThan($saved_memory, memory_get_usage(), "Flushing decreased memory consumption");
+        $this->assertLessThan($saved_memory, memory_get_usage(), 'Flushing decreased memory consumption');
     }
-
 
     /**
      * @small
@@ -76,6 +77,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     /**
      * @medium
      * @dataProvider cacheProvider
+     *
      * @param array $cache
      */
     public function testRemote($cache)
@@ -152,7 +154,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Data provider returning a real cache and a null cache
+     * Data provider returning a real cache and a null cache.
      *
      * @return array
      */
@@ -160,7 +162,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
     {
         return [
             [null],
-            [new EphemeralCachePool()]
+            [new EphemeralCachePool()],
         ];
     }
 
@@ -333,6 +335,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     *
      * @param array $cache
      */
     public function testNotFoundImage($cache)
@@ -347,6 +350,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
+     *
      * @param array $cache
      */
     public function testNotFoundVariation($cache)
@@ -447,6 +451,7 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
      * @medium
      * @dataProvider cacheProvider
      * @expectedException \Bravo3\ImageManager\Exceptions\ObjectAlreadyExistsException
+     *
      * @param array $cache
      */
     public function testOverwrite($cache)
@@ -482,16 +487,39 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($source->isPersistent());
     }
 
+    public function testMetadataRetrieval()
+    {
+        $inspector = new ImageInspector();
+
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(
+            new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')),
+            new EphemeralCachePool(),
+            [],
+            true
+        );
+
+        $image = $im->loadFromFile($fn, self::TEST_KEY);
+        $im->push($image);
+
+        $metadata = $inspector->getImageMetadata($image);
+        $this->assertEquals($metadata->getFormat(), ImageFormat::PNG());
+        $this->assertEquals($metadata->getDimensions(), new ImageDimensions(300, 300));
+        $this->assertEquals($metadata->getResolution(), new ImageDimensions(72, 72));
+        $this->assertEquals($metadata->getOrientation(), ImageOrientation::LANDSCAPE());
+    }
+
     // --
 
     /**
-     * Get a list of images
+     * Get a list of images.
      *
      * @return array
      */
     public function imageProvider()
     {
         $base = __DIR__.'/../Resources/';
+
         return [
             [$base.'image.jpg'],
             [$base.'image.png'],
@@ -500,10 +528,9 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         ];
     }
 
-
     /**
      * This isn't an actual test, it permits the teardown function to delete the test images
-     * Exclude this test to keep the test images
+     * Exclude this test to keep the test images.
      *
      * @small
      * @group deleteTestImages
@@ -548,6 +575,4 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         }
         rmdir($dir);
     }
-
-
 }
