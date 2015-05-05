@@ -2,10 +2,12 @@
 
 namespace Bravo3\ImageManager\Entities;
 
+use Bravo3\ImageManager\Entities\Interfaces\SerialisableInterface;
+
 /**
  * A set of rules for resampling images.
  */
-class ImageDimensions
+class ImageDimensions implements SerialisableInterface
 {
     /**
      * @var int
@@ -124,5 +126,41 @@ class ImageDimensions
     public function getGrab()
     {
         return $this->grab;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function serialise()
+    {
+        return json_encode([
+            'width'          => $this->getWidth(),
+            'height'         => $this->getHeight(),
+            'upscale'        => (bool) $this->canUpscale(),
+            'grab'           => (bool) $this->getGrab(),
+            'maintain-ratio' => (bool) $this->getMaintainRatio(),
+        ]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public static function deserialise($json)
+    {
+        if (empty($json)) {
+            throw \InvalidArgumentException('Json string is empty');
+        }
+
+        $object_data = json_decode($json, true);
+
+        $instance = new static(
+            isset($object_data['width']) ? $object_data['width'] : null,
+            isset($object_data['height']) ? $object_data['height'] : null,
+            isset($object_data['maintain-ratio']) ? $object_data['maintain-ratio'] : null,
+            isset($object_data['upscale']) ? $object_data['upscale'] : null,
+            isset($object_data['grab']) ? $object_data['grab'] : null
+        );
+
+        return $instance;
     }
 }

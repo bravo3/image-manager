@@ -6,6 +6,7 @@ use Bravo3\Cache\PoolInterface;
 use Bravo3\ImageManager\Encoders\EncoderInterface;
 use Bravo3\ImageManager\Encoders\InterventionEncoder;
 use Bravo3\ImageManager\Entities\Image;
+use Bravo3\ImageManager\Entities\ImageMetadata;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Entities\ImageCropDimensions;
 use Bravo3\ImageManager\Entities\ImageVariation;
@@ -62,11 +63,19 @@ class ImageManager
 
     /**
      * If true, we won't trust cache tags saying an image does not exist and will always check with the filesystem
-     * before throwing a NotExistsException
+     * before throwing a NotExistsException.
      *
      * @var bool
      */
     protected $validate_tags;
+
+    /**
+     * An associated array with unique Image key as the key and ImageMetadata objects
+     * as values.
+     *
+     * @var array
+     */
+    protected $metadata_cache;
 
     /**
      * Create a new image manager.
@@ -133,12 +142,19 @@ class ImageManager
             $adapter->setMetadata($image->getKey(), $metadata);
         }
 
+        // Retrieve source image metadata
+        $metadata = null;
+        if (!($image instanceof ImageVariation)) {
+            $image_manipulation = new ImageInspector();
+            $metadata = $image_manipulation->getImageMetadata($image);
+        }
+
         try {
             $this->filesystem->write($image->getKey(), $image->getData(), $overwrite);
             $image->__friendSet('persistent', true);
-            $this->tag($image->getKey());
+            $this->tag($image->getKey(), $metadata);
         } catch (FileAlreadyExists $e) {
-            $this->tag($image->getKey());
+            $this->tag($image->getKey(), $metadata);
             throw new ObjectAlreadyExistsException(self::ERR_ALREADY_EXISTS);
         }
 
@@ -167,6 +183,37 @@ class ImageManager
         }
 
         return $this;
+    }
+
+    /**
+     * Get meta information about the source image from the cache layer.
+     *
+     * @param Image $image
+     *
+     * @return ImageMetadata
+     */
+    public function getMetadata(Image $image)
+    {
+        // If the $image is a variation, refer to its parent
+        // for the metadata.
+        if ($image instanceof ImageVariation) {
+            $img_key = $image->getKey(true);
+        } else {
+            $img_key = $image->getKey();
+        }
+
+        // Retrieve from cache array if image metadata exists
+        if (isset($this->metadata_cache[$img_key])) {
+            return $this->metadata_cache[$img_key];
+        }
+
+        $item = $this->cache_pool->getItem('remote.'.$img_key);
+        $metadata = ImageMetadata::deserialise($item->get());
+
+        // Set cache item
+        $this->metadata_cache[$img_key] = $metadata;
+
+        return $metadata;
     }
 
     /**
@@ -255,17 +302,27 @@ class ImageManager
 
     /**
      * Mark a file as existing on the remote.
+     * If metadata object is populated, that metadata will be stored
+     * against the image tag stored in the cache layer.
      *
-     * @param string $key
+     * @param string        $key
+     * @param ImageMetadata $metadata
      */
-    protected function tag($key)
+    protected function tag($key, ImageMetadata $metadata = null)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
-        $item->set(1, null);
+
+        if (null !== $metadata) {
+            $value = $metadata->serialise();
+        } else {
+            $value = 1;
+        }
+
+        $item->set($value, null);
     }
 
     /**
@@ -276,7 +333,7 @@ class ImageManager
     protected function untag($key)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
@@ -295,7 +352,7 @@ class ImageManager
     protected function tagExists($key)
     {
         if (!$this->cache_pool) {
-            return;
+            return null;
         }
 
         $item = $this->cache_pool->getItem('remote.'.$key);
@@ -522,15 +579,17 @@ class ImageManager
     }
 
     /**
-     * Check with the filesystem if the image exists and update the image key cache
+     * Check with the filesystem if the image exists and update the image key cache.
      *
      * @param Image $image
+     *
      * @return bool
      */
     protected function validateTag(Image $image)
     {
         $exists = $this->filesystem->has($image->getKey());
         $this->setImageExists($image, $exists);
+
         return $exists;
     }
 }
