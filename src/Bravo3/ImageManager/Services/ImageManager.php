@@ -75,7 +75,7 @@ class ImageManager
      *
      * @var array
      */
-    protected static $metadata_cache;
+    protected $metadata_cache;
 
     /**
      * Create a new image manager.
@@ -194,25 +194,24 @@ class ImageManager
      */
     public function getMetadata(Image $image)
     {
-        $img_key = $image->getKey();
-
-        // If the $image is a varation, refer to its parent
+        // If the $image is a variation, refer to its parent
         // for the metadata.
         if ($image instanceof ImageVariation) {
             $img_key = $image->getKey(true);
+        } else {
+            $img_key = $image->getKey();
         }
 
         // Retrieve from cache array if image metadata exists
-        if (isset(self::$metadata_cache[$img_key])) {
-            return self::$metadata_cache[$img_key];
+        if (isset($this->metadata_cache[$img_key])) {
+            return $this->metadata_cache[$img_key];
         }
 
         $item = $this->cache_pool->getItem('remote.'.$img_key);
-
         $metadata = ImageMetadata::deserialise($item->get());
 
         // Set cache item
-        self::$metadata_cache[$img_key] = $metadata;
+        $this->metadata_cache[$img_key] = $metadata;
 
         return $metadata;
     }
@@ -317,9 +316,10 @@ class ImageManager
 
         $item = $this->cache_pool->getItem('remote.'.$key);
 
-        $value = 1;
         if (null !== $metadata) {
             $value = $metadata->serialise();
+        } else {
+            $value = 1;
         }
 
         $item->set($value, null);

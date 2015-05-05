@@ -194,7 +194,7 @@ class ImageMetadata implements SerialisableInterface
 
         $object_data = json_decode($json, true);
 
-        if (isset($object_data['mimetype'])) {
+        if (!isset($object_data['mimetype'])) {
             throw new InvalidImageMetadataException();
         }
 
