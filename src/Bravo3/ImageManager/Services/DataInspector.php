@@ -19,7 +19,7 @@ class DataInspector
     public function getImageFormat(&$data)
     {
         if (!$data || strlen($data) < 5) {
-            return;
+            return null;
         }
 
         // JPEG: FF D8
@@ -38,7 +38,7 @@ class DataInspector
             return ImageFormat::GIF();
         }
 
-        return;
+        return null;
     }
 
     /**
