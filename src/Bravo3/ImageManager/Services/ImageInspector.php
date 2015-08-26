@@ -7,6 +7,7 @@ use Bravo3\ImageManager\Entities\ImageMetadata;
 use Bravo3\ImageManager\Entities\ImageDimensions;
 use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Enum\ImageFormat;
+use Bravo3\ImageManager\Exceptions\ImageManagerException;
 
 /**
  * Image inspector service.
