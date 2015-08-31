@@ -5,6 +5,7 @@ namespace Bravo3\ImageManager\Services;
 use Bravo3\ImageManager\Entities\Image;
 use Bravo3\ImageManager\Entities\ImageMetadata;
 use Bravo3\ImageManager\Entities\ImageDimensions;
+use Bravo3\ImageManager\Entities\ImageVariation;
 use Bravo3\ImageManager\Enum\ImageOrientation;
 use Bravo3\ImageManager\Enum\ImageFormat;
 use Bravo3\ImageManager\Exceptions\ImageManagerException;
