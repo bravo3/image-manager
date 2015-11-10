@@ -5,7 +5,6 @@
         "This file is @generated automatically"
     ],
     "hash": "f532a5dacf46507dbd1b18fda68311f5",
-    "content-hash": "7330b0c2de927b3f563899609ca44806",
     "packages": [
         {
             "name": "bravo3/cache",
