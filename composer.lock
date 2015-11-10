@@ -1,23 +1,24 @@
 {
     "_readme": [
         "This file locks the dependencies of your project to a known state",
-        "Read more about it at http://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
     "hash": "f532a5dacf46507dbd1b18fda68311f5",
+    "content-hash": "7330b0c2de927b3f563899609ca44806",
     "packages": [
         {
             "name": "bravo3/cache",
-            "version": "0.1.1",
+            "version": "0.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/bravo3/cache.git",
-                "reference": "363c2bad8f0e2bb5f363dbdd8d7b9d7f8dfd6fe0"
+                "reference": "2d78cb0e19bf3a659bd3d98caeae7eec9bce84a6"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/bravo3/cache/zipball/363c2bad8f0e2bb5f363dbdd8d7b9d7f8dfd6fe0",
-                "reference": "363c2bad8f0e2bb5f363dbdd8d7b9d7f8dfd6fe0",
+                "url": "https://api.github.com/repos/bravo3/cache/zipball/2d78cb0e19bf3a659bd3d98caeae7eec9bce84a6",
+                "reference": "2d78cb0e19bf3a659bd3d98caeae7eec9bce84a6",
                 "shasum": ""
             },
             "require": {
@@ -25,13 +26,13 @@
                 "psr/log": "~1.0"
             },
             "require-dev": {
-                "aws/aws-sdk-php": "~2.5",
+                "bravo3/orm": "^0.5.1",
                 "phpunit/phpunit": ">=4.0.0",
-                "predis/predis": "~0.8"
+                "predis/predis": "^1.0.3"
             },
             "suggest": {
-                "aws/aws-sdk-php": "For DynamoDB support (~2.5)",
-                "predis/predis": "For Redis support (~0.8)"
+                "bravo3/orm": "For Bravo3/ORM support",
+                "predis/predis": "For Redis support"
             },
             "type": "library",
             "autoload": {
@@ -49,13 +50,14 @@
                     "email": "jordon@novatek.com.au"
                 }
             ],
-            "description": "A PHP 5.4 cache interface and various implementations including Doctrine, DynamoDB, Redis and Memcache",
+            "description": "A PHP 5.4 cache interface and various implementations including Redis and Bravo3/ORM",
             "keywords": [
                 "cache",
+                "orm",
                 "predis",
                 "redis"
             ],
-            "time": "2014-04-24 01:26:35"
+            "time": "2015-11-10 04:54:37"
         },
         {
             "name": "eloquent/enumeration",
@@ -333,12 +335,12 @@
             "target-dir": "Symfony/Component/Filesystem",
             "source": {
                 "type": "git",
-                "url": "https://github.com/symfony/Filesystem.git",
+                "url": "https://github.com/symfony/filesystem.git",
                 "reference": "a1f566d1f92e142fa1593f4555d6d89e3044a9b7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/Filesystem/zipball/a1f566d1f92e142fa1593f4555d6d89e3044a9b7",
+                "url": "https://api.github.com/repos/symfony/filesystem/zipball/a1f566d1f92e142fa1593f4555d6d89e3044a9b7",
                 "reference": "a1f566d1f92e142fa1593f4555d6d89e3044a9b7",
                 "shasum": ""
             },
