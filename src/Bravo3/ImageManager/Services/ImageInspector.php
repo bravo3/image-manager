@@ -73,6 +73,7 @@ class ImageInspector
      *
      * @param Image $image
      * @return ImageDimensions
+     * @throws ImageManagerException
      */
     protected function getImageResolution(Image $image)
     {
@@ -91,8 +92,8 @@ class ImageInspector
 
     /**
      * @param Image $image
-     *
      * @return ImageMetadata
+     * @throws ImageManagerException
      */
     public function getImageMetadata(Image $image)
     {
