@@ -330,9 +330,9 @@ class ImageManager
     /**
      * Mark a file as absent on the remote.
      *
-     * @param $key
+     * @param string $key
      *
-     * @return null
+     * @return void
      */
     protected function untag($key)
     {
