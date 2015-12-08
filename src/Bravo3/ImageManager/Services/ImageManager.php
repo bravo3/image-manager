@@ -305,8 +305,10 @@ class ImageManager
      * If metadata object is populated, that metadata will be stored
      * against the image tag stored in the cache layer.
      *
-     * @param string        $key
-     * @param ImageMetadata $metadata
+     * @param string             $key
+     * @param ImageMetadata|null $metadata
+     *
+     * @return null
      */
     protected function tag($key, ImageMetadata $metadata = null)
     {
@@ -328,7 +330,9 @@ class ImageManager
     /**
      * Mark a file as absent on the remote.
      *
-     * @param string $key
+     * @param $key
+     *
+     * @return null
      */
     protected function untag($key)
     {
@@ -454,12 +458,16 @@ class ImageManager
     /**
      * Create a new image variation from a local source image.
      *
-     * @param Image           $source
-     * @param ImageFormat     $format
-     * @param int             $quality
-     * @param ImageDimensions $dimensions
+     * @param Image                    $source
+     * @param ImageFormat              $format
+     * @param int                      $quality
+     * @param ImageDimensions|null     $dimensions
+     * @param ImageCropDimensions|null $crop_dimensions
      *
      * @return ImageVariation
+     *
+     * @throws ImageManagerException
+     * @throws NoSupportedEncoderException
      */
     public function createVariation(
         Image $source,
@@ -476,10 +484,12 @@ class ImageManager
     /**
      * Create a new image from a filename and hydrate it.
      *
-     * @param string $filename
-     * @param string $key
+     * @param string      $filename
+     * @param string|null $key
      *
      * @return Image
+     *
+     * @throws IoException
      */
     public function loadFromFile($filename, $key = null)
     {
@@ -577,6 +587,18 @@ class ImageManager
 
         return $this;
     }
+
+    /**
+     * Rename a file
+     *
+     * @param string $sourceKey
+     * @param string $targetKey
+     */
+    public function rename($sourceKey, $targetKey)
+    {
+        $this->filesystem->rename($sourceKey, $targetKey);
+    }
+
 
     /**
      * Check with the filesystem if the image exists and update the image key cache.
