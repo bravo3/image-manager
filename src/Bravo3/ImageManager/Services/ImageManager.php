@@ -305,8 +305,10 @@ class ImageManager
      * If metadata object is populated, that metadata will be stored
      * against the image tag stored in the cache layer.
      *
-     * @param string        $key
-     * @param ImageMetadata $metadata
+     * @param string             $key
+     * @param ImageMetadata|null $metadata
+     *
+     * @return $this
      */
     protected function tag($key, ImageMetadata $metadata = null)
     {
@@ -323,12 +325,16 @@ class ImageManager
         }
 
         $item->set($value, null);
+
+        return $this;
     }
 
     /**
      * Mark a file as absent on the remote.
      *
      * @param string $key
+     *
+     * @return $this
      */
     protected function untag($key)
     {
@@ -338,6 +344,8 @@ class ImageManager
 
         $item = $this->cache_pool->getItem('remote.'.$key);
         $item->delete();
+
+        return $this;
     }
 
     /**
@@ -454,12 +462,16 @@ class ImageManager
     /**
      * Create a new image variation from a local source image.
      *
-     * @param Image           $source
-     * @param ImageFormat     $format
-     * @param int             $quality
-     * @param ImageDimensions $dimensions
+     * @param Image                    $source
+     * @param ImageFormat              $format
+     * @param int                      $quality
+     * @param ImageDimensions|null     $dimensions
+     * @param ImageCropDimensions|null $crop_dimensions
      *
      * @return ImageVariation
+     *
+     * @throws ImageManagerException
+     * @throws NoSupportedEncoderException
      */
     public function createVariation(
         Image $source,
@@ -476,10 +488,12 @@ class ImageManager
     /**
      * Create a new image from a filename and hydrate it.
      *
-     * @param string $filename
-     * @param string $key
+     * @param string      $filename
+     * @param string|null $key
      *
      * @return Image
+     *
+     * @throws IoException
      */
     public function loadFromFile($filename, $key = null)
     {
@@ -575,6 +589,21 @@ class ImageManager
             $this->encoders[] = $encoder;
         }
 
+        return $this;
+    }
+
+    /**
+     * Rename a file
+     *
+     * @param string $source_key
+     * @param string $target_key
+     *
+     * @return $this
+     */
+    public function rename($source_key, $target_key)
+    {
+        $this->filesystem->rename($source_key, $target_key);
+        
         return $this;
     }
 
