@@ -598,8 +598,7 @@ class ImageManager
     {
         $this->filesystem->rename($sourceKey, $targetKey);
     }
-
-
+    
     /**
      * Check with the filesystem if the image exists and update the image key cache.
      *
