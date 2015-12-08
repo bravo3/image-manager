@@ -308,7 +308,7 @@ class ImageManager
      * @param string             $key
      * @param ImageMetadata|null $metadata
      *
-     * @return null
+     * @return $this
      */
     protected function tag($key, ImageMetadata $metadata = null)
     {
@@ -325,6 +325,8 @@ class ImageManager
         }
 
         $item->set($value, null);
+
+        return $this;
     }
 
     /**
@@ -332,7 +334,7 @@ class ImageManager
      *
      * @param string $key
      *
-     * @return void
+     * @return $this
      */
     protected function untag($key)
     {
@@ -342,6 +344,8 @@ class ImageManager
 
         $item = $this->cache_pool->getItem('remote.'.$key);
         $item->delete();
+
+        return $this;
     }
 
     /**
@@ -591,14 +595,18 @@ class ImageManager
     /**
      * Rename a file
      *
-     * @param string $sourceKey
-     * @param string $targetKey
+     * @param string $source_key
+     * @param string $target_key
+     *
+     * @return $this
      */
-    public function rename($sourceKey, $targetKey)
+    public function rename($source_key, $target_key)
     {
-        $this->filesystem->rename($sourceKey, $targetKey);
+        $this->filesystem->rename($source_key, $target_key);
+        
+        return $this;
     }
-    
+
     /**
      * Check with the filesystem if the image exists and update the image key cache.
      *
