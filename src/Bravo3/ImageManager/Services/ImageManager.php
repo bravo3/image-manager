@@ -608,12 +608,13 @@ class ImageManager
     {
         $this->filesystem->rename($source_key, $target_key);
 
+        $metadata = null;
         if ($this->tagExists($source_key)) {
             $metadata = $this->getMetadata($source_key);
-
-            $this->tag($target_key, $metadata);
             $this->untag($source_key);
         }
+
+        $this->tag($target_key, $metadata);
 
         return $this;
     }
