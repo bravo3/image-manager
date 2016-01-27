@@ -198,7 +198,7 @@ class ImageManager
         // for the metadata.
         if ($image instanceof ImageVariation) {
             $img_key = $image->getKey(true);
-        } elseif ($image instanceof ImageVariation) {
+        } elseif ($image instanceof Image) {
             $img_key = $image->getKey();
         } else {
             $img_key = $image;
