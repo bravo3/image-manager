@@ -107,6 +107,27 @@ class ImageManagerTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($im->exists($image_a));
     }
 
+    public function testRenamedAssetIsPersistent()
+    {
+        $fn = __DIR__.'/../Resources/image.png';
+        $im = new ImageManager(new Filesystem(new LocalAdapter(static::$tmp_dir.'remote')), new EphemeralCachePool());
+
+        $image = $im->loadFromFile($fn, self::TEST_KEY);
+        $im->push($image);
+
+        $original_key = $image->getKey();
+        $new_key      = '/tmp/some-new-key';
+
+        $im->rename($original_key, $new_key);
+
+        $renamed = new Image($new_key);
+
+        $im->pull($renamed);
+
+        $this->assertTrue($renamed->isHydrated());
+        $this->assertTrue($renamed->isPersistent());
+    }
+
     /**
      * @expectedException \Bravo3\ImageManager\Exceptions\NotExistsException
      * @medium

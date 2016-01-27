@@ -188,18 +188,20 @@ class ImageManager
     /**
      * Get meta information about the source image from the cache layer.
      *
-     * @param Image $image
+     * @param Image|string $image
      *
      * @return ImageMetadata
      */
-    public function getMetadata(Image $image)
+    public function getMetadata($image)
     {
         // If the $image is a variation, refer to its parent
         // for the metadata.
         if ($image instanceof ImageVariation) {
             $img_key = $image->getKey(true);
-        } else {
+        } elseif ($image instanceof Image) {
             $img_key = $image->getKey();
+        } else {
+            $img_key = $image;
         }
 
         // Retrieve from cache array if image metadata exists
@@ -595,6 +597,8 @@ class ImageManager
     /**
      * Rename a file
      *
+     * TODO: Potentially fix https://github.com/KnpLabs/Gaufrette/issues/374 here.
+     *
      * @param string $source_key
      * @param string $target_key
      *
@@ -603,7 +607,15 @@ class ImageManager
     public function rename($source_key, $target_key)
     {
         $this->filesystem->rename($source_key, $target_key);
-        
+
+        $metadata = null;
+        if ($this->tagExists($source_key)) {
+            $metadata = $this->getMetadata($source_key);
+            $this->untag($source_key);
+        }
+
+        $this->tag($target_key, $metadata);
+
         return $this;
     }
 
